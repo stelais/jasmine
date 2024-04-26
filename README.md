@@ -31,3 +31,19 @@ The function `lightcurve_data_reader` reads the light curve files and returns a 
 import files_organizer.data_challenge_reader as dcr
 lightcurve_df = dcr.lightcurve_data_reader(data_challenge_lc_number_=5, folder_path_='../data')
 ```
+
+#### 1.4 Reading the microlensing parameters
+How to use the `LightcurveEvent` class:  
+```   
+import files_organizer.lightcurve_cls as lc
+# Call the lightcurve class
+the_lightcurve = lc.LightcurveEvent(2) # Binary star
+# See what are the available dictionaries
+the_lightcurve.print_dictionaries()
+# Get info from that dict
+the_lightcurve.lens_dict['lens_system_mass__msun']
+# Get the lightcurve datapoints
+lightcurve_datapoints = the_lightcurve.lightcurve_data(filter_='W149', folder_path_='../data')
+```
+
+See notebook `analysis/getting_information_about_a_lightcurve.ipynb` for more details.

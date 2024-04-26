@@ -60,9 +60,9 @@ def what_type_of_lightcurve(data_challenge_lc_number_, *,
     cataclysmic_variables_master_df = cataclysmic_variables_master_reader(cataclysmic_variables_path_)
     single_lens_master_df = single_lens_master_reader(single_lens_path_)
     masters_dict = {'binary_star': binary_star_master_df,
-                'bound_planet': bound_planet_master_df,
-                'cataclysmic_variables': cataclysmic_variables_master_df,
-                'single_lens': single_lens_master_df}
+                    'bound_planet': bound_planet_master_df,
+                    'cataclysmic_variables': cataclysmic_variables_master_df,
+                    'single_lens': single_lens_master_df}
 
     for master_name, dataframe in masters_dict.items():
         LC_check = dataframe[dataframe['data_challenge_lc_number'] == data_challenge_lc_number_]['data_challenge_lc_number'].values
