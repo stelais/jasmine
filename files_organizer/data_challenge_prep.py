@@ -60,7 +60,7 @@ def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_):
         binary_lens_header_line = header_line.replace(',normw,sigma_t0,sigma_tE,sigma_u0,sigma_alpha,sigma_s,'
                                                       'sigma_q,sigma_rs,sigma_F00,sigma_fs0,sigma_F01,sigma_fs1,'
                                                       'sigma_thetaE',
-                                                      ',unimportant0,event_type,unimportant1,lc_root,'
+                                                      ',normw,event_type,unimportant0,lc_root,'
                                                       'data_challenge_lc_number\n')
         binary_star_file.write(binary_lens_header_line)
         for line in binary_star_lines:
