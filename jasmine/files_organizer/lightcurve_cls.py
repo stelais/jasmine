@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import files_organizer.data_challenge_reader as dcr
+import jasmine.files_organizer.data_challenge_reader as dcr
 import pandas as pd
 
 
