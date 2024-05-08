@@ -10,8 +10,8 @@ from astropy.coordinates import get_body_barycentric
 from astropy.time import Time
 
 def creating_ephemerides(*,
-                         satellite_folder_path_='/Users/jmbrashe/VBBOrbital/satellitedir',
-                         ephemerides_path_ = '/Users/jmbrashe/VBBOrbital/data-challenge-1'):
+                         satellite_folder_path_='/Users/jmbrashe/VBBOrbital/satellitedir/',
+                         ephemerides_path_ = '/Users/jmbrashe/VBBOrbital/data-challenge-1/'):
     if os.path.isdir(satellite_folder_path_):
         print(f'Directory {satellite_folder_path_} already exists! Continuing to file creation.')
     else: 
