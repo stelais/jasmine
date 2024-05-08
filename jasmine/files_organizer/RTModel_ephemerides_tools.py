@@ -17,7 +17,7 @@ def creating_ephemerides(*,
     else: 
         os.mkdir(satellite_folder_path_)
         print(f'Folder {satellite_folder_path_} created!')
-
+    solar_system_ephemeris.set('de432s');
     filters=['W149', 'Z087']
     deldot_str = '{:>11}'.format('0.0000000') #string of zeros for the delta r column 
     names=['BJD','X_EQ','Y_EQ','Z_EQ','X_ECL','Y_ECL','Z_ECL'] # names of data challenge ephemerides columns
@@ -62,9 +62,13 @@ def roundton(sval,n):
         if int(l[n])>=5:
             if int(l[n-1])<9:l[n-1]=str(int(l[n-1])+1)
             elif int(l[n-1])==9:
-                l[n-1]='0'
-                l[n-2]=str(int(l[n-2])+1)
+                j=1
+                while int(l[n-j])==9:
+                    l[n-j]='0'
+                    j+=1
+                l[n-j]=str(int(l[n-j])+1)
             s="".join(l[0:n])
+            return s
             return s
         else: 
             s="".join(l[0:n])
@@ -72,8 +76,18 @@ def roundton(sval,n):
 # makes one line of the ephemerides file.
 def makeline(dfline,deldot):
     bjd_str='{:0<17}'.format(dfline['BJD'])
-    ra_str='{:>13}'.format(round(dfline['ra'],5))
-    dec_str='{:>9}'.format(round(dfline['dec'],5))
+    ra_str=str(round(dfline['ra'],5))
+    ra_split=ra_str.split('.')
+    ra_split[1] = '{:0<5}'.format(ra_split[1])
+    ra_str = ra_split[0]+'.'+ra_split[1]
+    ra_str = '{:>13}'.format(ra_str)
+
+
+    dec_str=str(round(dfline['dec'],5))
+    dec_split=dec_str.split('.')
+    dec_split[1] = '{:0<5}'.format(dec_split[1])
+    dec_str = dec_split[0]+'.'+dec_split[1]
+    dec_str = '{:>9}'.format(dec_str)
     dist_str=roundton(dfline['distance'],16)
     line = bjd_str+' '+ra_str+' '+dec_str+' '+dist_str+' '+deldot+'\n'
     return line
