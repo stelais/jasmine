@@ -15,5 +15,6 @@ setup(name='jasmine-sis',
                         "notebook==7.1.3",
                         "ipykernel==6.29.4",
                         "matplotlib==3.8.4",
-                        "astropy==6.1.0"
+                        "astropy==6.1.0",
+                        "jplephem==2.22"
                         ])
