@@ -45,7 +45,7 @@ def creating_ephemerides(*,
             eq_coords['delta_dot']=np.zeros(eq_coords.shape[0])
             eq_coords['BJD']=eph_df['BJD']
             eq_coords=eq_coords[['BJD','ra','dec','distance','delta_dot']]
-            with open(satellite_folder_path_+ephname_,'w') as f:
+            with open(f'{satellite_folder_path_}/{ephname_}','w') as f:
                     f.write('$$SOE\n')
                     for j in range(eq_coords.shape[0]):
                         line = makeline(eq_coords.iloc[j,0:4],deldot_str)
