@@ -10,8 +10,8 @@ from astropy.coordinates import get_body_barycentric
 from astropy.time import Time
 
 def creating_ephemerides(*,
-                         satellite_folder_path_='/Users/jmbrashe/VBBOrbital/satellitedir/',
-                         ephemerides_path_ = '/Users/jmbrashe/VBBOrbital/data-challenge-1/'):
+                         satellite_folder_path_='/Users/jmbrashe/VBBOrbital/satellitedir',
+                         ephemerides_path_ = '/Users/jmbrashe/VBBOrbital/data-challenge-1'):
     if os.path.isdir(satellite_folder_path_):
         print(f'Directory {satellite_folder_path_} already exists! Continuing to file creation.')
     else: 
@@ -24,10 +24,10 @@ def creating_ephemerides(*,
     au_per_km = 1/(149597870.700) # for conversion
     for i in range(len(filters)):
         ephname_ = f'satellite{i+1}.txt'
-        if os.path.exists(f'{satellite_folder_path_}'+ephname_):
+        if os.path.exists(f'{satellite_folder_path_}/{ephname_}'):
             raise FileExistsError(f'Ephemerides file {ephname_} already exists in directory {satellite_folder_path_}')
         else: 
-            eph_df = pd.read_csv(ephemerides_path_+f'wfirst_ephemeris_{filters[i]}'+'.txt',sep='\s+',names=names)
+            eph_df = pd.read_csv(ephemerides_path_+f'/wfirst_ephemeris_{filters[i]}'+'.txt',sep='\s+',names=names)
             eq_coords = SkyCoord(x=eph_df.iloc[:,1],y=eph_df.iloc[:,2],z=eph_df.iloc[:,3],unit='au',frame='icrs',obstime='J2000',representation_type='cartesian')
             #Get earth location in cartesian ICRS ti calculate actual distance ...
             t=Time(eph_df['BJD'],format='jd')
