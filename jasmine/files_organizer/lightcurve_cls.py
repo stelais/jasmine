@@ -237,8 +237,8 @@ class WeightAndFlags:
         self.weight_and_flags_chi2_1 = lightcurve_master['chi2_1'].values[0]
         self.weight_and_flags_chi2 = lightcurve_master['chi2'].values[0]
 
-        if lc_type in ['bound_planet', 'binary_star', 'single_lens']:
-            self.weight_and_flags_normalization_weight = lightcurve_master['normw'].values[0]
+        #if lc_type in ['bound_planet', 'binary_star', 'single_lens']:
+        #    self.weight_and_flags_normalization_weight = lightcurve_master['normw'].values[0]
 
 
 @dataclass
