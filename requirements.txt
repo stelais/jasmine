@@ -1,6 +1,8 @@
-pandas
+pandas~=2.2.2
 jupyter
 notebook
 ipykernel
 matplotlib
-astropy
+astropy~=6.1.0
+numpy~=1.26.4
+setuptools~=69.5.1

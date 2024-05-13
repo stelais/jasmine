@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='jasmine-sis',
-      version='0.1.0.0.7',
+      version='0.1.0.0.8',
       description='JASMINE: Joint Analysis of Simulations for Microlensing INterest Events',
       url='https://github.com/stelais/jasmine',
       author='Stela IS',
