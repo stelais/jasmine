@@ -134,7 +134,6 @@ class BinaryLensSingleSourceLS:
     """
     LS	Binary_lens_single_source
     7 parameters
-    TODO - not ready. file to be read not specified
     """
     separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
     mass_ratio: float # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
@@ -146,20 +145,32 @@ class BinaryLensSingleSourceLS:
     number_of_parameters = 7
 
     def __init__(self, file_to_be_read):
-        self.separation = file_to_be_read[0]
-        self.mass_ratio = file_to_be_read[1]
-        self.u0 = file_to_be_read[2]
-        self.alpha = file_to_be_read[3]
-        self.rho = file_to_be_read[4]
-        self.tE = file_to_be_read[5]
-        self.t0 = file_to_be_read[6]
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.separation = float(parameters[0])
+            self.separation_error = float(errors[0])
+            self.mass_ratio = float(parameters[1])
+            self.mass_ratio_error = float(errors[1])
+            self.u0 = float(parameters[2])
+            self.u0_error = float(errors[2])
+            self.alpha = float(parameters[3])
+            self.alpha_error = float(errors[3])
+            self.rho = float(parameters[4])
+            self.rho_error = float(errors[4])
+            self.tE = float(parameters[5])
+            self.tE_error = float(errors[5])
+            self.t0 = float(parameters[6])
+            self.t0_error = float(errors[6])
+            self.chi2 = float(parameters[-1])
+
 
 @dataclass
 class BinaryLensSingleSourceWithParallaxLX:
     """
     LX	Binary_lens_single_source with parallax
     9 parameters
-    TODO - not ready. file to be read not specified
     """
     separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
     mass_ratio: float  # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
@@ -173,15 +184,29 @@ class BinaryLensSingleSourceWithParallaxLX:
     number_of_parameters = 9
 
     def __init__(self, file_to_be_read):
-        self.separation = file_to_be_read[0]
-        self.mass_ratio = file_to_be_read[1]
-        self.u0 = file_to_be_read[2]
-        self.alpha = file_to_be_read[3]
-        self.rho = file_to_be_read[4]
-        self.tE = file_to_be_read[5]
-        self.t0 = file_to_be_read[6]
-        self.piN = file_to_be_read[7]
-        self.piE = file_to_be_read[8]
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.separation = float(parameters[0])
+            self.separation_error = float(errors[0])
+            self.mass_ratio = float(parameters[1])
+            self.mass_ratio_error = float(errors[1])
+            self.u0 = float(parameters[2])
+            self.u0_error = float(errors[2])
+            self.alpha = float(parameters[3])
+            self.alpha_error = float(errors[3])
+            self.rho = float(parameters[4])
+            self.rho_error = float(errors[4])
+            self.tE = float(parameters[5])
+            self.tE_error = float(errors[5])
+            self.t0 = float(parameters[6])
+            self.t0_error = float(errors[6])
+            self.piN = float(parameters[7])
+            self.piN_error = float(errors[7])
+            self.piE = float(parameters[8])
+            self.piE_error = float(errors[8])
+            self.chi2 = float(parameters[-1])
 
 
 @dataclass
@@ -189,7 +214,6 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     """
     LO	Binary_lens_single_source with orbital motion
     12 parameters
-    TODO - not ready. file to be read not specified
     """
     separation: float   # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
     mass_ratio: float   # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
@@ -206,15 +230,32 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     number_of_parameters = 12
 
     def __init__(self, file_to_be_read):
-        self.separation = file_to_be_read[0]
-        self.mass_ratio = file_to_be_read[1]
-        self.u0 = file_to_be_read[2]
-        self.alpha = file_to_be_read[3]
-        self.rho = file_to_be_read[4]
-        self.tE = file_to_be_read[5]
-        self.t0 = file_to_be_read[6]
-        self.piN = file_to_be_read[7]
-        self.piE = file_to_be_read[8]
-        self.gamma1 = file_to_be_read[9]
-        self.gamma2 = file_to_be_read[10]
-        self.gammaz = file_to_be_read[11]
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.separation = float(parameters[0])
+            self.separation_error = float(errors[0])
+            self.mass_ratio = float(parameters[1])
+            self.mass_ratio_error = float(errors[1])
+            self.u0 = float(parameters[2])
+            self.u0_error = float(errors[2])
+            self.alpha = float(parameters[3])
+            self.alpha_error = float(errors[3])
+            self.rho = float(parameters[4])
+            self.rho_error = float(errors[4])
+            self.tE = float(parameters[5])
+            self.tE_error = float(errors[5])
+            self.t0 = float(parameters[6])
+            self.t0_error = float(errors[6])
+            self.piN = float(parameters[7])
+            self.piN_error = float(errors[7])
+            self.piE = float(parameters[8])
+            self.piE_error = float(errors[8])
+            self.gamma1 = float(parameters[9])
+            self.gamma1_error = float(errors[9])
+            self.gamma2 = float(parameters[10])
+            self.gamma2_error = float(errors[10])
+            self.gammaz = float(parameters[11])
+            self.gammaz_error = float(errors[11])
+            self.chi2 = float(parameters[-1])

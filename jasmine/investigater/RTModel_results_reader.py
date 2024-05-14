@@ -1,6 +1,8 @@
 import glob
 import pandas as pd
 
+from jasmine.investigater.RTModel_results_cls import ModelResults
+
 
 def chi2_getter(filepath):
     """
@@ -10,7 +12,6 @@ def chi2_getter(filepath):
     """
     with open(filepath, 'r') as f:
         lines = f.readlines()
-        print()
         chi2 = float(lines[0].split(' ')[-1])
     return chi2
 
@@ -36,17 +37,31 @@ def models_per_chi2_rank(folder_path):
     top_1_of_each.to_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv', index=False)
 
 
+def get_summary_of_q_s_chi2_per_event(folder_path, ):
+    top_1_of_each = pd.read_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv')
+    for model_name in top_1_of_each['model']:
+        model_type = model_name[0:2]
+        model_path = folder_path + '/Models/' + model_name + '.txt'
+        model_results = ModelResults(model_type, folder_path.split('_')[-1], model_path)
+        with open(model_path, 'r') as f:
+            lines = f.readlines()
+            line1 = lines[0].split(' ')
+            line2 = lines[1].split(' ')
+            print()
+
+
 if __name__ == '__main__':
     # print(chi2_getter('/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/event_004/Models/BS0004-1.txt'))
     list_of_bound_planet_events = [4, 8, 12, 25, 32, 40, 47, 50, 53, 62, 66, 69, 74, 78, 81, 92, 95, 99, 100, 103,
                                    107, 124, 128, 131, 139, 152, 163, 186, 193, 194, 199, 208, 214, 217, 218, 223,
                                    226, 227, 250, 253, 258, 267, 289]
-    # event_number = list_of_bound_planet_events[0]
-    # folder_path_ = (f'/Users/sishitan/Documents/Scripts/RTModel_project/'
-                    # f'RTModel/datachallenge_events/event_{event_number:03}')
-    # models_per_chi2_rank(folder_path_)
-    for event_number in list_of_bound_planet_events:
-        root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
-        # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
-        folder_path_ = f'{root_path}event_{event_number:03}'
-        models_per_chi2_rank(folder_path_)
+    event_number = list_of_bound_planet_events[0]
+    folder_path_ = (f'/Users/sishitan/Documents/Scripts/RTModel_project/'
+                    f'RTModel/datachallenge_events/event_{event_number:03}')
+    models_per_chi2_rank(folder_path_)
+    get_summary_of_q_s_chi2_per_event(folder_path_)
+    # for event_number in list_of_bound_planet_events:
+    #     root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
+    #     # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
+    #     folder_path_ = f'{root_path}event_{event_number:03}'
+    #     models_per_chi2_rank(folder_path_)
