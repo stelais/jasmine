@@ -39,6 +39,9 @@ def models_per_chi2_rank(folder_path):
 
 
 def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
+    """
+    This function creates a summary of q and s for the top 1 models + trues values for the given event
+    """
     top_1_of_each = pd.read_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv')
     data_challenge_lc_number = int(folder_path.split('_')[-1])
     master_path = folder_path.split('/datachallenge_events/')[0]
@@ -67,6 +70,9 @@ def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
 
 
 def event_summary_q_s_wrapper(root_path, list_of_events, type_of_event):
+    """
+    This function wraps up all the results for the given type of events, and produce a .csv with all of them
+    """
     df_general = []
     for event_number_ in list_of_events:
         df_for_one_event = pd.read_csv(f'{root_path}/event_{event_number_:03}/Models/event_summary_q_s.csv')
