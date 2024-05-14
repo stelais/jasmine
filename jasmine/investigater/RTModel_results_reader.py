@@ -1,6 +1,7 @@
 import glob
 import pandas as pd
 
+from jasmine.files_organizer.lightcurve_cls import LightcurveEventDataChallenge
 from jasmine.investigater.RTModel_results_cls import ModelResults
 
 
@@ -37,9 +38,23 @@ def models_per_chi2_rank(folder_path):
     top_1_of_each.to_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv', index=False)
 
 
-def get_summary_of_q_s_chi2_per_event(folder_path):
+def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
     top_1_of_each = pd.read_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv')
-    data_to_be_saved = {'data_challenge_lc_number': [int(folder_path.split('_')[-1]),]}
+    data_challenge_lc_number = int(folder_path.split('_')[-1])
+    master_path = folder_path.split('/datachallenge_events/')[0]
+    if type_of_event == 'bound_planet':
+        true_values_path = f'{master_path}/data/bound_planet.csv'
+        true_q = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).planet.planet_mass_ratio
+        true_s = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).planet.planet_separation
+    elif type_of_event == 'binary_star':
+        true_values_path = f'{master_path}/data/binary_star.csv'
+        true_q = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).second_lens.mass_ratio
+        true_s = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).second_lens.separation
+    else:
+        raise ValueError(f'type_of_event must be either bound_planet or binary_star. Given {type_of_event}')
+    data_to_be_saved = {'data_challenge_lc_number': [data_challenge_lc_number,],
+                        'true_q': [true_q,],
+                        'true_s': [true_s,],}
     for model_name in top_1_of_each['model']:
         model_type = model_name[0:2]
         model_path = folder_path + '/Models/' + model_name + '.txt'
@@ -63,7 +78,6 @@ def event_summary_q_s_wrapper(root_path, list_of_events, type_of_event):
     return all_q_s_wrapper_df
 
 
-
 if __name__ == '__main__':
     # print(chi2_getter('/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/event_004/Models/BS0004-1.txt'))
     list_of_bound_planet_events = [4, 8, 12, 25, 32, 40, 47, 50, 53, 62, 66, 69, 74, 78, 81, 92, 95, 99, 100, 103,
@@ -74,12 +88,12 @@ if __name__ == '__main__':
     #                 f'RTModel/datachallenge_events/event_{event_number:03}')
     # models_per_chi2_rank(folder_path_)
     # get_summary_of_q_s_chi2_per_event(folder_path_)
+    root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
+    # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
 
     for event_number in list_of_bound_planet_events:
-        root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
-        # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
         folder_path_ = f'{root_path}event_{event_number:03}'
         models_per_chi2_rank(folder_path_)
-        get_summary_of_q_s_chi2_per_event(folder_path_)
+        get_summary_of_q_s_chi2_per_event(folder_path_, 'bound_planet')
 
-    event_summary_q_s_wrapper(root_path, list_of_bound_planet_events, 'bound_planets')
+    event_summary_q_s_wrapper(root_path, list_of_bound_planet_events, 'bound_planet')
