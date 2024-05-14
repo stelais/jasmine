@@ -42,12 +42,11 @@ def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
     top_1_of_each = pd.read_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv')
     data_challenge_lc_number = int(folder_path.split('_')[-1])
     master_path = folder_path.split('/datachallenge_events/')[0]
+    true_values_path = f'{master_path}/data'
     if type_of_event == 'bound_planet':
-        true_values_path = f'{master_path}/data/bound_planet.csv'
         true_q = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).planet.planet_mass_ratio
         true_s = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).planet.planet_separation
     elif type_of_event == 'binary_star':
-        true_values_path = f'{master_path}/data/binary_star.csv'
         true_q = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).second_lens.mass_ratio
         true_s = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).second_lens.separation
     else:
