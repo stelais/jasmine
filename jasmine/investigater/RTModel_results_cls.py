@@ -6,22 +6,20 @@ class ModelResults:
     def __init__(self, model_type, data_challenge_lc_number, file_to_be_read):
         self.model_type = model_type
         self.data_challenge_lc_number = data_challenge_lc_number
-        self.chi2 = file_to_be_read[3]
-        model_df = pd.read_csv(f"{model_type}*", sep=' ', header=None)
         if model_type == 'PS':
-            self.model = SingleLensSingleSourcePS(model_df)
+            self.model_parameters = SingleLensSingleSourcePS(file_to_be_read)
         elif model_type == 'PX':
-            self.model = SingleLensSingleSourceWithParallaxPX(model_df)
+            self.model_parameters = SingleLensSingleSourceWithParallaxPX(file_to_be_read)
         elif model_type == 'BS':
-            self.model = SingleLensBinarySourceBS(model_df)
+            self.model_parameters = SingleLensBinarySourceBS(file_to_be_read)
         elif model_type == 'BO':
-            self.model = SingleLensBinarySourceWithXallarapBO(model_df)
+            self.model_parameters = SingleLensBinarySourceWithXallarapBO(file_to_be_read)
         elif model_type == 'LS':
-            self.model = BinaryLensSingleSourceLS(model_df)
+            self.model_parameters = BinaryLensSingleSourceLS(file_to_be_read)
         elif model_type == 'LX':
-            self.model = BinaryLensSingleSourceWithParallaxLX(model_df)
+            self.model_parameters = BinaryLensSingleSourceWithParallaxLX(file_to_be_read)
         elif model_type == 'LO':
-            self.model = BinaryLensSingleSourceWithOrbitalMotionLO(model_df)
+            self.model_parameters = BinaryLensSingleSourceWithOrbitalMotionLO(file_to_be_read)
         else:
             raise ValueError(f"Model type {model_type} not recognized.")
 
