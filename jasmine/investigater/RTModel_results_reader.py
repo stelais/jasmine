@@ -62,7 +62,9 @@ def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
         model_path = folder_path + '/Models/' + model_name + '.txt'
         model_parameters = ModelResults(model_type, folder_path.split('_')[-1], model_path).model_parameters
         data_to_be_saved[f'{model_type}_q'] = [model_parameters.mass_ratio,]
+        data_to_be_saved[f'{model_type}_q_err'] = [model_parameters.mass_ratio_error,]
         data_to_be_saved[f'{model_type}_s'] = [model_parameters.separation,]
+        data_to_be_saved[f'{model_type}_s_err'] = [model_parameters.separation_error,]
         data_to_be_saved[f'{model_type}_chi2'] = [model_parameters.chi2,]
     event_summary = pd.DataFrame(data_to_be_saved)
     event_summary.to_csv(folder_path + '/Models/event_summary_q_s.csv', index=False)
