@@ -6,3 +6,5 @@ matplotlib
 astropy~=6.1.0
 numpy~=1.26.4
 setuptools~=69.5.1
+jplephem~=2.22
+bokeh~=3.4.1

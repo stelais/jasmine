@@ -8,7 +8,8 @@ setup(name='jasmine-sis',
       author_email='stela.ishitanisilva@nasa.gov',
       license='MIT',
       packages=['jasmine',
-                'jasmine.files_organizer'],
+                'jasmine.files_organizer',
+                'jasmine.investigater'],
       zip_safe=False,
       install_requires=["pandas==2.1.4",
                         "jupyter==1.0.0",
@@ -16,5 +17,6 @@ setup(name='jasmine-sis',
                         "ipykernel==6.29.4",
                         "matplotlib==3.8.4",
                         "astropy==6.1.0",
-                        "jplephem==2.22"
+                        "jplephem==2.22",
+                        "bokeh==3.4.1"
                         ])
