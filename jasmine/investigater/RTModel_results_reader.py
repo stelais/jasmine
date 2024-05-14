@@ -46,6 +46,7 @@ if __name__ == '__main__':
                     # f'RTModel/datachallenge_events/event_{event_number:03}')
     # models_per_chi2_rank(folder_path_)
     for event_number in list_of_bound_planet_events:
-        folder_path_ = (f'/Users/sishitan/Documents/Scripts/RTModel_project/'
-                            f'RTModel/datachallenge_events/event_{event_number:03}')
+        root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
+        # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
+        folder_path_ = f'{root_path}event_{event_number:03}'
         models_per_chi2_rank(folder_path_)
