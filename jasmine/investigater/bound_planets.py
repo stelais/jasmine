@@ -24,3 +24,8 @@ for event_number in list_of_bound_planet_events:
 wrapper_df = pd.concat(df_general)
 wrapper_df.plot(x='true_s', y='true_q', kind='scatter', title='q VS s: 43 planet events', alpha=0.5)
 plt.savefig('q_vs_s_43_planet_events.png', dpi=300)
+
+wrapper_df.plot(x='true_s', y='true_q', kind='scatter', title='q VS s: 43 planet events', alpha=0.5)
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('log_scale_q_vs_s_43_planet_events.png', dpi=300)
