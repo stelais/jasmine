@@ -46,12 +46,13 @@ def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
     data_challenge_lc_number = int(folder_path.split('_')[-1])
     master_path = folder_path.split('/datachallenge_events/')[0]
     true_values_path = f'{master_path}/data'
+    the_lightcurve_event = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path)
     if type_of_event == 'bound_planet':
-        true_q = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).planet.planet_mass_ratio
-        true_s = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).planet.planet_separation
+        true_q = the_lightcurve_event.planet.planet_mass_ratio
+        true_s = the_lightcurve_event.planet.planet_separation
     elif type_of_event == 'binary_star':
-        true_q = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).second_lens.mass_ratio
-        true_s = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path).second_lens.separation
+        true_q = the_lightcurve_event.second_lens.mass_ratio
+        true_s = the_lightcurve_event.second_lens.separation
     else:
         raise ValueError(f'type_of_event must be either bound_planet or binary_star. Given {type_of_event}')
     data_to_be_saved = {'data_challenge_lc_number': [data_challenge_lc_number,],
