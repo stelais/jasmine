@@ -3,26 +3,32 @@ import pandas as pd
 
 
 class ModelResults:
-    def __init__(self, model_type, data_challenge_lc_number, file_to_be_read):
-        self.model_type = model_type
+    def __init__(self, file_to_be_read, *, data_challenge_lc_number=None):
+        self.model_type = file_to_be_read.split('/')[-1][0:2]
         self.data_challenge_lc_number = data_challenge_lc_number
-        if model_type == 'PS':
+        if self.model_type == 'PS':
+            self.model_extensive_name = 'Single Lens Single Source (1L1S)'
             self.model_parameters = SingleLensSingleSourcePS(file_to_be_read)
-        elif model_type == 'PX':
+        elif self.model_type == 'PX':
+            self.model_extensive_name = 'Single Lens Single Source with Parallax (1L1S+plx)'
             self.model_parameters = SingleLensSingleSourceWithParallaxPX(file_to_be_read)
-        elif model_type == 'BS':
+        elif self.model_type == 'BS':
+            self.model_extensive_name = 'Single Lens Binary Source (1L2S)'
             self.model_parameters = SingleLensBinarySourceBS(file_to_be_read)
-        elif model_type == 'BO':
+        elif self.model_type == 'BO':
+            self.model_extensive_name = 'Single Lens Binary Source with Xallarap (1L2S+xlp)'
             self.model_parameters = SingleLensBinarySourceWithXallarapBO(file_to_be_read)
-        elif model_type == 'LS':
+        elif self.model_type == 'LS':
+            self.model_extensive_name = 'Binary Lens Single Source (2L1S)'
             self.model_parameters = BinaryLensSingleSourceLS(file_to_be_read)
-        elif model_type == 'LX':
+        elif self.model_type == 'LX':
+            self.model_extensive_name = 'Binary Lens Single Source with Parallax (2L1S+plx)'
             self.model_parameters = BinaryLensSingleSourceWithParallaxLX(file_to_be_read)
-        elif model_type == 'LO':
+        elif self.model_type == 'LO':
+            self.model_extensive_name = 'Binary Lens Single Source with Parallax and Orbital Motion (2L1S+plx+OM)'
             self.model_parameters = BinaryLensSingleSourceWithOrbitalMotionLO(file_to_be_read)
         else:
-            raise ValueError(f"Model type {model_type} not recognized.")
-
+            raise ValueError(f"Model type {self.model_type} not recognized.")
 
 
 @dataclass
@@ -134,7 +140,7 @@ class BinaryLensSingleSourceLS:
     7 parameters
     """
     separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
-    mass_ratio: float # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
+    mass_ratio: float  # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
     u0: float  # Impact parameter normalized to Einstein angle
     alpha: float  # Angle between the source velocity and the vector pointing from the secondary to the primary lens
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
@@ -213,8 +219,8 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     LO	Binary_lens_single_source with orbital motion
     12 parameters
     """
-    separation: float   # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
-    mass_ratio: float   # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
+    separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
+    mass_ratio: float  # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
     u0: float  # Impact parameter normalized to Einstein angle
     alpha: float  # Angle between the source velocity and the vector pointing from the secondary to the primary lens
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)

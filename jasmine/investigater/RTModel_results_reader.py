@@ -61,7 +61,8 @@ def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
     for model_name in top_1_of_each['model']:
         model_type = model_name[0:2]
         model_path = folder_path + '/Models/' + model_name + '.txt'
-        model_parameters = ModelResults(model_type, folder_path.split('_')[-1], model_path).model_parameters
+        model_parameters = ModelResults(model_path,
+                                        data_challenge_lc_number=folder_path.split('_')[-1]).model_parameters
         data_to_be_saved[f'{model_type}_q'] = [model_parameters.mass_ratio,]
         data_to_be_saved[f'{model_type}_q_err'] = [model_parameters.mass_ratio_error,]
         data_to_be_saved[f'{model_type}_s'] = [model_parameters.separation,]
@@ -72,17 +73,17 @@ def get_summary_of_q_s_chi2_per_event(folder_path, type_of_event):
     return event_summary
 
 
-def event_summary_q_s_wrapper(root_path, list_of_events, type_of_event):
+def event_summary_q_s_wrapper(root_path_, list_of_events, type_of_event):
     """
     This function wraps up all the results for the given type of events, and produce a .csv with all of them
     """
     df_general = []
     for event_number_ in list_of_events:
-        df_for_one_event = pd.read_csv(f'{root_path}/event_{event_number_:03}/Models/event_summary_q_s.csv')
+        df_for_one_event = pd.read_csv(f'{root_path_}/event_{event_number_:03}/Models/event_summary_q_s.csv')
         df_general.append(df_for_one_event)
     # Concatenate all the dataframes
     all_q_s_wrapper_df = pd.concat(df_general)
-    all_q_s_wrapper_df.to_csv(f'{root_path}/all_{type_of_event}_q_s.csv', index=False)
+    all_q_s_wrapper_df.to_csv(f'{root_path_}/all_{type_of_event}_q_s.csv', index=False)
     return all_q_s_wrapper_df
 
 
