@@ -12,11 +12,12 @@ def master_head_getter(path_to_wfirstcolumn_file_):
     return wfirstcolumn_df
 
 
-def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_):
+def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_, path_to_output_folder_):
     """
     This function reads the master file and splits it into 4 different files based on the type of event.
     :param path_to_master_file_:
     :param path_to_wfirstcolumn_file_:
+    :param path_to_output_folder_:
     :return:
     """
     single_lens_lines = []  # dcnormffp
@@ -49,14 +50,14 @@ def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_):
                 else:
                     raise ValueError("Unknown type of event\n", line)
 
-    with open('data/single_lens.csv', 'w') as single_lens_file:
+    with open(f'{path_to_output_folder_}/single_lens.csv', 'w') as single_lens_file:
         single_lens_header_line = header_line+(',unimportant0,unimportant1,unimportant2,'
                                                'event_type,unimportant3,lc_root,data_challenge_lc_number\n')
         single_lens_file.write(single_lens_header_line)
         for line in single_lens_lines:
             single_lens_file.write(line)
 
-    with open('data/binary_star.csv', 'w') as binary_star_file:
+    with open(f'{path_to_output_folder_}/binary_star.csv', 'w') as binary_star_file:
         binary_lens_header_line = header_line.replace(',normw,sigma_t0,sigma_tE,sigma_u0,sigma_alpha,sigma_s,'
                                                       'sigma_q,sigma_rs,sigma_F00,sigma_fs0,sigma_F01,sigma_fs1,'
                                                       'sigma_thetaE',
@@ -67,7 +68,7 @@ def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_):
             line = line.replace(',,,', ',')
             binary_star_file.write(line)
 
-    with open('data/bound_planet.csv', 'w') as bound_planet_file:
+    with open(f'{path_to_output_folder_}/bound_planet.csv', 'w') as bound_planet_file:
         bound_planet_header_line = header_line.replace(',normw,sigma_t0,sigma_tE,sigma_u0,sigma_alpha,sigma_s,'
                                                        'sigma_q,sigma_rs,sigma_F00,sigma_fs0,sigma_F01,sigma_fs1,'
                                                        'sigma_thetaE',
@@ -78,7 +79,7 @@ def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_):
             line = line.replace(',,,', ',')
             bound_planet_file.write(line)
 
-    with open('data/cataclysmic_variables.csv', 'w') as cataclysmic_variables_file:
+    with open(f'{path_to_output_folder_}/cataclysmic_variables.csv', 'w') as cataclysmic_variables_file:
         cataclysmic_variables_header_line = header_line.replace(',normw,sigma_t0,sigma_tE,sigma_u0,sigma_alpha,sigma_s,'
                                                                 'sigma_q,sigma_rs,sigma_F00,sigma_fs0,sigma_F01,'
                                                                 'sigma_fs1,'
@@ -92,9 +93,11 @@ def master_file_spliter(path_to_master_file_, path_to_wfirstcolumn_file_):
 
 if __name__ == '__main__':
     # Write where you can find the master files
-    path_to_master_file = 'data/master_file.txt'
-    path_to_wfirstcolumn_file = 'data/wfirstColumnNumbers.txt'
-    master_file_spliter(path_to_master_file, path_to_wfirstcolumn_file)
+    root_path = '/Users/stela/Documents/Scripts/RTModel_project/datachallenge'
+    path_to_master_file = f'{root_path}/master_file.txt'
+    path_to_wfirstcolumn_file = f'{root_path}/wfirstColumnNumbers.txt'
+    path_to_output_folder = root_path
+    master_file_spliter(path_to_master_file, path_to_wfirstcolumn_file, path_to_output_folder)
     print("Files have been created successfully")
 
 

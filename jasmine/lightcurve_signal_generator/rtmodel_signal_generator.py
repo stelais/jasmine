@@ -1,12 +1,12 @@
 from jasmine import RTModelTemplateBinaryLightCurve
 import numpy as np
-from VBBinaryLensing import VBBinaryLensing
+import VBBinaryLensing
 
 
-def magnification_using_vbb(lightcurve_, *,
-                            time_interval=np.linspace(100, 400, 500),
-                            parallax=False,
-                            orbital_motion=False):
+def rtmodel_magnification_using_vbb(lightcurve_, *,
+                                    time_interval=None,
+                                    parallax=False,
+                                    orbital_motion=False):
 
     vbb = VBBinaryLensing.VBBinaryLensing()
 
@@ -17,7 +17,10 @@ def magnification_using_vbb(lightcurve_, *,
     einstein_time_tE = lightcurve_.einstein_time_tE
     peak_time_t0 = lightcurve_.peak_time_t0
     rho = lightcurve_.source_radius_rho
-
+    if time_interval is None:
+        time_interval = np.linspace(peak_time_t0 - 2 * einstein_time_tE,
+                                    peak_time_t0 + 2 * einstein_time_tE,
+                                    10000)
     if parallax:
         print('Edit here to a collection of parameters with parallax')
     if orbital_motion:
@@ -26,15 +29,14 @@ def magnification_using_vbb(lightcurve_, *,
           alpha, np.log(rho), np.log(einstein_time_tE), peak_time_t0]
     results = vbb.BinaryLightCurve(pr, time_interval)
 
-    return results[0]
+    return results[0], time_interval
 
 
 def easy_plot_lightcurve(lightcurve_):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
-    times = np.linspace(270, 330, 100000)
-    magnification = magnification_using_vbb(lightcurve_, time_interval=times)
-    ax.scatter(times, magnification, s=0.8, alpha=0.3)
+    magnification, time_interval = rtmodel_magnification_using_vbb(lightcurve_)
+    ax.scatter(time_interval, magnification, s=0.8, alpha=0.3)
     plt.show(dpi=600)
 
 
