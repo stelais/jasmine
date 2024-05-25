@@ -10,7 +10,7 @@ setup(name='jasmine-astro',
       packages=['jasmine',
                 'jasmine.classes_and_files_reader',
                 'jasmine.files_organizer',
-                'jasmine.investigater'],
+                'jasmine.investigator'],
       zip_safe=False,
       install_requires=["pandas==2.1.4",
                         "jupyter==1.0.0",
@@ -19,5 +19,6 @@ setup(name='jasmine-astro',
                         "matplotlib==3.8.4",
                         "astropy==6.1.0",
                         "jplephem==2.22",
-                        "bokeh==3.4.1"
+                        "bokeh==3.4.1",
+                        "VBBinaryLensing==3.7.0"
                         ])
