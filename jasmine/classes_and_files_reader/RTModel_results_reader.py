@@ -1,8 +1,8 @@
 import glob
 import pandas as pd
 
-from jasmine.file_readers_and_classes.datachallenge_lightcurve_cls import LightcurveEventDataChallenge
-from jasmine.file_readers_and_classes.RTModel_results_cls import ModelResults
+from jasmine.classes_and_files_reader.datachallenge_lightcurve_cls import LightcurveEventDataChallenge
+from jasmine.classes_and_files_reader.RTModel_results_cls import ModelResults
 
 
 def chi2_getter(filepath):

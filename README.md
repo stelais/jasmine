@@ -2,12 +2,23 @@
 JASMINE: **J**oint **A**nalysis of **S**imulation for **M**icrolensing **IN**terested **E**vents
 
 ---
-pip installable as `jasmine-sis`
+pip installable as `jasmine-astro`
 ```
-pip install jasmine-sis
+pip install jasmine-astro
 ```
 ---
-## 1. Microlensing Data Challenge Simulations
+## 1. Reading RTModel outputs
+### `ModelResults` class
+```
+from jasmine import ModelResults
+model = ModelResults(file_to_be_read='[your_path]/[Final]Models/LX0000-1.txt')
+print(model.model_type, model.model_extensive_name)
+print(model.model_parameters)
+```
+See notebook `analysis/reading_rtmodel_models.ipynb`
+
+---
+## 2. Microlensing Data Challenge Simulations
 
 ### Splitting master file
 1. Make sure you downloaded the `master_file.txt` and `wfirstColumnNumbers.txt`  from the data challenge folder:  
@@ -18,10 +29,10 @@ pip install jasmine-sis
    * cataclysmic_variables.csv
    * single_lens.csv
 ---
-###  Using the `LightcurveEvent` class:  
+###  Using the `LightcurveEventDataChallenge` class:  
 ```
-import jasmine.files_organizer.lightcurve_cls as lc
-the_lightcurve = lc.LightcurveEvent(2) # Binary star # Call the lightcurve class
+from jasmine import LightcurveEventDataChallenge
+the_lightcurve = LightcurveEventDataChallenge(2) # Binary star # Call the lightcurve class
 vars(the_lightcurve).keys() # See what are the available attributes and subclasses
 the_lightcurve.lens # subclass
 lightcurve_datapoints = the_lightcurve.lightcurve_data(filter_='W149', folder_path_='../data') # Get the lightcurve datapoints

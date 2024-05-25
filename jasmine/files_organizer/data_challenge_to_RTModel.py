@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import jasmine.file_readers_and_classes.datachallenge_lightcurve_cls as lc
+import jasmine.classes_and_files_reader.datachallenge_lightcurve_cls as lc
 import jasmine.files_organizer.RTModel_ephemerides_tools as ephtools
 from astropy.coordinates import SkyCoord
 from astropy import units

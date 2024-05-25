@@ -1,13 +1,14 @@
 from setuptools import setup
 
-setup(name='jasmine-sis',
-      version='0.1.0.0.8',
+setup(name='jasmine-astro',
+      version='0.1.1',
       description='JASMINE: Joint Analysis of Simulations for Microlensing INterest Events',
       url='https://github.com/stelais/jasmine',
       author='Stela IS',
       author_email='stela.ishitanisilva@nasa.gov',
       license='MIT',
       packages=['jasmine',
+                'jasmine.classes_and_files_reader',
                 'jasmine.files_organizer',
                 'jasmine.investigater'],
       zip_safe=False,
