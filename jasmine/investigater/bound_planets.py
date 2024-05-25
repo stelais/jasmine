@@ -1,4 +1,4 @@
-from jasmine.files_organizer.lightcurve_cls import LightcurveEventDataChallenge
+from jasmine.file_readers_and_classes.datachallenge_lightcurve_cls import LightcurveEventDataChallenge
 import pandas as pd
 import matplotlib.pyplot as plt
 
