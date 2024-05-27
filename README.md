@@ -28,7 +28,7 @@ rtmodel_template_two_lenses = RTModelTemplateForBinaryLightCurve(template_line=2
                                                                      input_peak_t2=302)
 magnification, times = rtmodel_template_two_lenses_.rtmodel_magnification_using_vbb()
 ```
-
+See notebook `analysis/generating_lightcurves_from_rtmodel_templates.ipynb`
 
 ---
 ## 3. Microlensing Data Challenge Simulations
