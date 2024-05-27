@@ -18,7 +18,20 @@ print(model.model_parameters)
 See notebook `analysis/reading_rtmodel_models.ipynb`
 
 ---
-## 2. Microlensing Data Challenge Simulations
+## 2. Generating a Binary lens signal based on one of the 113 RTModel templates
+### `RTModelTemplateForBinaryLightCurve` class
+```
+from jasmine import RTModelTemplateForBinaryLightCurve
+rtmodel_template_two_lenses = RTModelTemplateForBinaryLightCurve(template_line=2,
+                                                                     path_to_template=template_path,
+                                                                     input_peak_t1=300,
+                                                                     input_peak_t2=302)
+magnification, times = rtmodel_template_two_lenses_.rtmodel_magnification_using_vbb()
+```
+
+
+---
+## 3. Microlensing Data Challenge Simulations
 
 ### Splitting master file
 1. Make sure you downloaded the `master_file.txt` and `wfirstColumnNumbers.txt`  from the data challenge folder:  
