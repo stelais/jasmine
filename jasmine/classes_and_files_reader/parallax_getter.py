@@ -11,14 +11,15 @@ def get_summary_of_parallax_per_event(folder_path):
     data_to_be_saved = {'data_challenge_lc_number': [data_challenge_lc_number,]}
     for model_name in top_1_of_each['model']:
         model_type = model_name[0:2]
-        model_path = folder_path + '/Models/' + model_name + '.txt'
-        model_parameters = ModelResults(model_path,
-                                        data_challenge_lc_number=folder_path.split('_')[-1]).model_parameters
-        data_to_be_saved[f'{model_type}_piN'] = [model_parameters.piN,]
-        data_to_be_saved[f'{model_type}_piN_error'] = [model_parameters.piN_error,]
-        data_to_be_saved[f'{model_type}_piE'] = [model_parameters.piE,]
-        data_to_be_saved[f'{model_type}_piE_error'] = [model_parameters.piE_error,]
-        data_to_be_saved[f'{model_type}_chi2'] = [model_parameters.chi2,]
+        if model_type == 'LO' or model_type == 'LX':
+            model_path = folder_path + '/Models/' + model_name + '.txt'
+            model_parameters = ModelResults(model_path,
+                                            data_challenge_lc_number=folder_path.split('_')[-1]).model_parameters
+            data_to_be_saved[f'{model_type}_piN'] = [model_parameters.piN,]
+            data_to_be_saved[f'{model_type}_piN_error'] = [model_parameters.piN_error,]
+            data_to_be_saved[f'{model_type}_piE'] = [model_parameters.piE,]
+            data_to_be_saved[f'{model_type}_piE_error'] = [model_parameters.piE_error,]
+            data_to_be_saved[f'{model_type}_chi2'] = [model_parameters.chi2,]
     event_summary = pd.DataFrame(data_to_be_saved)
     event_summary.to_csv(folder_path + '/Models/event_summary_parallax.csv', index=False)
     return event_summary
