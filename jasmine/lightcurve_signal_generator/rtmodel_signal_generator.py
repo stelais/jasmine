@@ -11,11 +11,15 @@ def easy_plot_lightcurve(rtmodel_template_two_lenses_):
 
 
 def all_rtmodel_template_generator(template_path, output_folder):
+    '''
+    SIS: I accidentally committed this part and this function is not ready yet.
+    DO NOT USE IT
+    '''
     lines = np.arange(2, 114)
     times_peak = np.arange(1, 402, 5)
     times_peak_2 = np.arange(1, 402, 2)
     base_times_peak_2 = np.arange(1, 402, 4)
-    np.random.shuffle(base_times_peak_2)
+    shuffled_peak_2 = np.random.shuffle(base_times_peak_2)
     times_peak_2 = base_times_peak_2.append(shuffled_peak_2)
 
     # intervals =
