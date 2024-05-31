@@ -26,7 +26,7 @@ class RTModelTemplateForBinaryLightCurve:
                  input_peak_t1, input_peak_t2):
         self.template_line = template_line
         self.path_to_template = path_to_template
-        line_information = read_template(path_to_template).loc[template_line-2]
+        line_information = read_template(path_to_template).loc[template_line - 2]
         self.separation_s = line_information['s']
         self.mass_ratio_q = line_information['q']
         self.impact_parameter_u0 = line_information['u0']
@@ -43,12 +43,26 @@ class RTModelTemplateForBinaryLightCurve:
         self.peak_time_t0 = t0_definer(t1=self.input_peak_t1,
                                        tE=self.einstein_time_tE,
                                        tp1=self.pre_calculated_peak_tp1)
+        self.results = None
+        self.source_trajectory_y1 = None
+        self.source_trajectory_y2 = None
+        self.magnification = None
+        self.times = None
+        self.critical_curves = None
+        self.caustics = None
 
-    def rtmodel_magnification_using_vbb(self, *,
-                                        time_interval=None,
-                                        parallax=False,
-                                        orbital_motion=False):
-
+    def rtmodel_calculation_using_vbb(self, *, time_interval=None,
+                                      parallax=False,
+                                      orbital_motion=False,
+                                      n_points=10000):
+        """
+        Calculate the light curve using the VBBinaryLensing package
+        :param time_interval:
+        :param parallax:
+        :param orbital_motion:
+        :param n_points:
+        :return:
+        """
         vbb = VBBinaryLensing.VBBinaryLensing()
 
         separation_s = self.separation_s
@@ -61,16 +75,69 @@ class RTModelTemplateForBinaryLightCurve:
         if time_interval is None:
             time_interval = np.linspace(peak_time_t0 - 2 * einstein_time_tE,
                                         peak_time_t0 + 2 * einstein_time_tE,
-                                        10000)
+                                        n_points)
         if parallax:
             print('Edit here to a collection of parameters with parallax')
         if orbital_motion:
             print('Edit here to a collection of parameters with orbital motion')
         pr = [np.log(separation_s), np.log(mass_ratio_q), impact_parameter_u0,
               alpha, np.log(rho), np.log(einstein_time_tE), peak_time_t0]
-        results = vbb.BinaryLightCurve(pr, time_interval)
-        magnification = results[0]
-        return magnification, time_interval
+        self.results = vbb.BinaryLightCurve(pr, time_interval)
+        self.times = time_interval
+        return self.results
+
+    def rtmodel_magnification_using_vbb(self, *,
+                                        time_interval=None,
+                                        parallax=False,
+                                        orbital_motion=False,
+                                        n_points=10000):
+        """
+        Calculate the magnification using the VBBinaryLensing package
+        :param time_interval:
+        :param parallax:
+        :param orbital_motion:
+        :param n_points:
+        :return:
+        """
+        self.results = self.rtmodel_calculation_using_vbb(time_interval=time_interval,
+                                                          parallax=parallax,
+                                                          orbital_motion=orbital_motion,
+                                                          n_points=n_points)
+
+        self.magnification = self.results[0]
+        return self.magnification, self.times
+
+    def rtmodel_source_trajectory_using_vbb(self, *,
+                                            time_interval=None,
+                                            parallax=False,
+                                            orbital_motion=False,
+                                            n_points=10000):
+        """
+        Calculate the source trajectory using the VBBinaryLensing package
+        :param time_interval:
+        :param parallax:
+        :param orbital_motion:
+        :param n_points:
+        :return:
+        """
+        if self.results is None:
+            self.results = self.rtmodel_calculation_using_vbb(time_interval=time_interval,
+                                                              parallax=parallax,
+                                                              orbital_motion=orbital_motion,
+                                                              n_points=n_points)
+        self.source_trajectory_y1 = self.results[1]
+        self.source_trajectory_y2 = self.results[2]
+        return self.source_trajectory_y1, self.source_trajectory_y2
+
+    def rtmodel_caustics_using_vbb(self):
+        """
+        Calculate the caustics using the VBBinaryLensing package
+        :return:
+        """
+        vbb = VBBinaryLensing.VBBinaryLensing()
+        caustics = vbb.Caustics(self.separation_s, self.mass_ratio_q)
+        self.caustics = caustics
+        return caustics
 
 
 def tE_definer(*, t1, t2, tp1, tp2):
