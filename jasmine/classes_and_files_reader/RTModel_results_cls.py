@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import pandas as pd
+import numpy as np
 
 
 class ModelResults:
@@ -139,16 +139,29 @@ class BinaryLensSingleSourceLS:
     LS	Binary_lens_single_source
     7 parameters
     """
+    number_of_parameters: int
     separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
+    separation_error: float
     mass_ratio: float  # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
+    mass_ratio_error: float
     u0: float  # Impact parameter normalized to Einstein angle
+    u0_error: float
     alpha: float  # Angle between the source velocity and the vector pointing from the secondary to the primary lens
+    alpha_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
+    rho_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
+    tE_error: float
     t0: float  # Closest approach time in HJD to the barycenter
-    number_of_parameters = 7
+    t0_error: float
+    chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
 
     def __init__(self, file_to_be_read):
+        self.number_of_parameters = 7
         with open(file_to_be_read, 'r') as f:
             lines = f.readlines()
             parameters = lines[0].split(' ')
@@ -168,6 +181,10 @@ class BinaryLensSingleSourceLS:
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
             self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[7]), float(parameters[9])
+            self.sources = float(parameters[8]), float(parameters[10])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
 
 
 @dataclass
@@ -176,18 +193,33 @@ class BinaryLensSingleSourceWithParallaxLX:
     LX	Binary_lens_single_source with parallax
     9 parameters
     """
+    number_of_parameters: int
     separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
+    separation_error: float
     mass_ratio: float  # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
+    mass_ratio_error: float
     u0: float  # Impact parameter normalized to Einstein angle
+    u0_error: float
     alpha: float  # Angle between the source velocity and the vector pointing from the secondary to the primary lens
+    alpha_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
+    rho_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
+    tE_error: float
     t0: float  # Closest approach time in HJD to the barycenter
+    t0_error: float
     piN: float  # Parallax component along North
+    piN_error: float
     piE: float  # Parallax component along East
-    number_of_parameters = 9
+    piE_error: float
+    chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
 
     def __init__(self, file_to_be_read):
+        self.number_of_parameters = 9
         with open(file_to_be_read, 'r') as f:
             lines = f.readlines()
             parameters = lines[0].split(' ')
@@ -211,6 +243,10 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.piE = float(parameters[8])
             self.piE_error = float(errors[8])
             self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[9]), float(parameters[11])
+            self.sources = float(parameters[10]), float(parameters[12])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
 
 
 @dataclass
@@ -219,21 +255,35 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     LO	Binary_lens_single_source with orbital motion
     12 parameters
     """
+    number_of_parameters: int
     separation: float  # Separation between the lenses in Einstein radii (internally fit in logarithmic (ln) scale)
+    separation_error: float
     mass_ratio: float  # Mass ratio of the secondary to the primary lens (internally fit in logarithmic (ln) scale)
+    mass_ratio_error: float
     u0: float  # Impact parameter normalized to Einstein angle
+    u0_error: float
     alpha: float  # Angle between the source velocity and the vector pointing from the secondary to the primary lens
+    alpha_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
+    rho_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
+    tE_error: float
     t0: float  # Closest approach time in HJD to the barycenter
+    t0_error: float
     piN: float  # Parallax component along North
+    piN_error: float
     piE: float  # Parallax component along East
+    piE_error: float
     gamma1: float  # Angular velocity parallel to the lens axis
+    gamma1_error: float
     gamma2: float  # Angular velocity perpendicular to the lens axis
+    gamma2_error: float
     gammaz: float  # Angular velocity along the line of sight
-    number_of_parameters = 12
+    gammaz_error: float
+    chi2: float  # Chi2 value for the fit
 
     def __init__(self, file_to_be_read):
+        self.number_of_parameters = 12
         with open(file_to_be_read, 'r') as f:
             lines = f.readlines()
             parameters = lines[0].split(' ')
@@ -263,3 +313,7 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.gammaz = float(parameters[11])
             self.gammaz_error = float(errors[11])
             self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[12]), float(parameters[14])
+            self.sources = float(parameters[13]), float(parameters[15])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
