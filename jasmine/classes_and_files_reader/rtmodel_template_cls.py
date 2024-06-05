@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 import VBBinaryLensing
+from moana import lens as mlens
 
 
 @dataclass
@@ -50,6 +51,7 @@ class RTModelTemplateForBinaryLightCurve:
         self.times = None
         self.critical_curves = None
         self.caustics = None
+        self.type_of_caustics = None
 
     def rtmodel_calculation_using_vbb(self, *, time_interval=None,
                                       parallax=False,
@@ -139,6 +141,18 @@ class RTModelTemplateForBinaryLightCurve:
         self.caustics = caustics
         return caustics
 
+    def which_topology_from_moana(self):
+        """
+        Check the topology type of the binary lens system
+        :return:
+        """
+        if self.separation_s < mlens.close_limit_2l(self.mass_ratio_q):
+            self.type_of_caustics = 'close'
+        elif self.separation_s <= mlens.wide_limit_2l(self.mass_ratio_q):
+            self.type_of_caustics = 'ressonant'
+        else:
+            self.type_of_caustics = 'wide'
+        return self.type_of_caustics
 
 def tE_definer(*, t1, t2, tp1, tp2):
     """
