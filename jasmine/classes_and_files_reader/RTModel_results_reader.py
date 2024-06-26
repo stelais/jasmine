@@ -86,6 +86,56 @@ def event_summary_q_s_wrapper(root_path_, list_of_events, type_of_event):
     all_q_s_wrapper_df.to_csv(f'{root_path_}/all_{type_of_event}_q_s.csv', index=False)
     return all_q_s_wrapper_df
 
+#####
+def get_summary_of_piN_piE_chi2_per_event(folder_path, type_of_event):
+    """
+    This function creates a summary of q and s for the top 1 models + trues values for the given event
+    """
+    top_1_of_each = pd.read_csv(folder_path + '/Models/chi2_top1_of_each_binary_lens_model.csv')
+    data_challenge_lc_number = int(folder_path.split('_')[-1])
+    master_path = folder_path.split('/datachallenge_events/')[0]
+    true_values_path = f'{master_path}/data'
+    the_lightcurve_event = LightcurveEventDataChallenge(data_challenge_lc_number, true_values_path)
+    if type_of_event == 'bound_planet':
+        true_piN = the_lightcurve_event.planet.planet_mass_ratio
+        true_piE = the_lightcurve_event.planet.planet_separation
+    elif type_of_event == 'binary_star':
+        true_q = the_lightcurve_event.second_lens.mass_ratio
+        true_s = the_lightcurve_event.second_lens.separation
+    else:
+        raise ValueError(f'type_of_event must be either bound_planet or binary_star. Given {type_of_event}')
+    data_to_be_saved = {'data_challenge_lc_number': [data_challenge_lc_number,],
+                        'true_q': [true_q,],
+                        'true_s': [true_s,],}
+    for model_name in top_1_of_each['model']:
+        model_type = model_name[0:2]
+        model_path = folder_path + '/Models/' + model_name + '.txt'
+        model_parameters = ModelResults(model_type, folder_path.split('_')[-1], model_path).model_parameters
+        data_to_be_saved[f'{model_type}_q'] = [model_parameters.mass_ratio,]
+        data_to_be_saved[f'{model_type}_q_err'] = [model_parameters.mass_ratio_error,]
+        data_to_be_saved[f'{model_type}_s'] = [model_parameters.separation,]
+        data_to_be_saved[f'{model_type}_s_err'] = [model_parameters.separation_error,]
+        data_to_be_saved[f'{model_type}_chi2'] = [model_parameters.chi2,]
+    event_summary = pd.DataFrame(data_to_be_saved)
+    event_summary.to_csv(folder_path + '/Models/event_summary_q_s.csv', index=False)
+    return event_summary
+
+
+def event_summary_q_s_wrapper(root_path, list_of_events, type_of_event):
+    """
+    This function wraps up all the results for the given type of events, and produce a .csv with all of them
+    """
+    df_general = []
+    for event_number_ in list_of_events:
+        df_for_one_event = pd.read_csv(f'{root_path}/event_{event_number_:03}/Models/event_summary_q_s.csv')
+        df_general.append(df_for_one_event)
+    # Concatenate all the dataframes
+    all_q_s_wrapper_df = pd.concat(df_general)
+    all_q_s_wrapper_df.to_csv(f'{root_path}/all_{type_of_event}_q_s.csv', index=False)
+    return all_q_s_wrapper_df
+#####3
+
+
 
 if __name__ == '__main__':
     # print(chi2_getter('/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/event_004/Models/BS0004-1.txt'))
