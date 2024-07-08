@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='jasmine-astro',
-      version='0.1.4.2',
+      version='0.1.4.3',
       description='JASMINE: Joint Analysis of Simulations for Microlensing INterest Events',
       url='https://github.com/stelais/jasmine',
       author='Stela IS, Jon B., C.R., JASMINE authors',
@@ -24,5 +24,5 @@ setup(name='jasmine-astro',
                         "jplephem==2.22",
                         "bokeh==3.4.1",
                         "VBBinaryLensing==3.7.0",
-                        "moana-pypi==0.2.1"
+                        "moana-pypi==0.2.2"
                         ])
