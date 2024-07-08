@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import jasmine.classes_and_files_reader.datachallenge_lightcurve_cls as lc
 import jasmine.files_organizer.RTModel_ephemerides_tools as ephtools
+from jasmine.files_organizer.ld_parameters import *
 from astropy.coordinates import SkyCoord
 from astropy import units
 
@@ -95,6 +96,7 @@ def creating_files(*, data_challenge_lc_number_,
     """
     data_folder_ = f'{output_folder_path_}/event_{data_challenge_lc_number_:03}/Data'
     filters = ['W149', 'Z087']
+    ld_par = [W149, Z087] # Order must match order in FilterToData.txt
     the_lightcurve = lc.LightcurveEventDataChallenge(data_challenge_lc_number_, data_folder=master_input_folder_path_)
     i = 1
     for filter_ in filters:
@@ -109,6 +111,12 @@ def creating_files(*, data_challenge_lc_number_,
                                           index=False, header=False, mode='a')
             print(f'File Roman{filter_}sat{i}.dat created in {data_folder_}.')
         i += 1
+    # write LimbDarkening.txt file    
+    with open(data_folder+'/LimbDarkening.txt','w') as f:
+        for mu in ld_par:
+            f.write(f'{mu}\n')
+
+
 
     # Create the file with the event information
     event_ra = the_lightcurve.event_info.event_right_ascension__deg
