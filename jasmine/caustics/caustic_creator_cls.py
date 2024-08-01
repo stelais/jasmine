@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import numpy as np
 
-from moana.lens import ResonantCaustic as caustic_calculator
+from moana.lens import ResonantCaustic as CausticCalculator
 from moana.lens import close_limit_2l, wide_limit_2l
 
 
@@ -26,7 +26,7 @@ class Caustic:
         self.type_of_caustics = None
         self.separation_s = separation_s
         self.mass_ratio_q = mass_ratio_q
-        caustic_data_points = caustic_calculator(sep=separation_s, q=mass_ratio_q)
+        caustic_data_points = CausticCalculator(sep=separation_s, q=mass_ratio_q)
         self.number_of_data_points = number_of_data_points
         caustic_data_points._sample(self.number_of_data_points)
         self.half_caustic = caustic_data_points.full['zeta'].values
