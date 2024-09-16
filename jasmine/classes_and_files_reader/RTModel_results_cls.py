@@ -36,19 +36,36 @@ class SingleLensSingleSourcePS:
     """
     PS	Single_lens_single_source
     4 parameters
-    TODO - not ready. file to be read not specified
     """
+    number_of_parameters: int
     u0: float  # Impact parameter normalized to Einstein angle (internally fit in logarithmic (ln) scale)
+    u0_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
+    tE_error: float
     t0: float  # Closest approach time in HJD
+    t0_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
-    number_of_parameters = 4
+    rho_error: float
 
     def __init__(self, file_to_be_read):
-        self.u0 = file_to_be_read[0]
-        self.tE = file_to_be_read[1]
-        self.t0 = file_to_be_read[2]
-        self.rho = file_to_be_read[3]
+        self.number_of_parameters = 4
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.u0 = float(parameters[0])
+            self.u0_error = float(errors[0])
+            self.tE = float(parameters[1])
+            self.tE_error = float(errors[1])
+            self.t0 = float(parameters[2])
+            self.t0_error = float(errors[2])
+            self.rho = float(parameters[3])
+            self.rho_error = float(errors[3])
+            self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[4]), float(parameters[6])
+            self.sources = float(parameters[5]), float(parameters[7])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
 
 
 @dataclass
@@ -56,23 +73,44 @@ class SingleLensSingleSourceWithParallaxPX:
     """
     PX	Single_lens_single_source with parallax
     6 parameters
-    TODO - not ready. file to be read not specified
     """
+    number_of_parameters: int
     u0: float  # Impact parameter normalized to Einstein angle
+    u0_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
+    tE_error: float
     t0: float  # Closest approach time in HJD
+    t0_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
+    rho_error: float
     piN: float  # Parallax component along North
+    piN_error: float
     piE: float  # Parallax component along East
-    number_of_parameters = 6
+    piE_error: float
 
     def __init__(self, file_to_be_read):
-        self.u0 = file_to_be_read[0]
-        self.tE = file_to_be_read[1]
-        self.t0 = file_to_be_read[2]
-        self.rho = file_to_be_read[3]
-        self.piN = file_to_be_read[4]
-        self.piE = file_to_be_read[5]
+        self.number_of_parameters = 6
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.u0 = float(parameters[0])
+            self.u0_error = float(errors[0])
+            self.tE = float(parameters[1])
+            self.tE_error = float(errors[1])
+            self.t0 = float(parameters[2])
+            self.t0_error = float(errors[2])
+            self.rho = float(parameters[3])
+            self.rho_error = float(errors[3])
+            self.piN = float(parameters[4])
+            self.piN_error = float(errors[4])
+            self.piE = float(parameters[5])
+            self.piE_error = float(errors[5])
+            self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[6]), float(parameters[8])
+            self.sources = float(parameters[7]), float(parameters[9])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
 
 
 @dataclass
@@ -80,25 +118,53 @@ class SingleLensBinarySourceBS:
     """
     BS	Single_lens_binary_source
     7 parameters
-    TODO - not ready. file to be read not specified
     """
+    number_of_parameters: int
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
+    tE_error: float
     flux_ratio: float  # Flux ratio of the secondary to the primary source (internally fit in logarithmic (ln) scale)
-    u01: float  # Impact parameter of the primary source
+    flux_ratio_error: float
+    u01: float  # Impact parameter normalized to Einstein angle for primary source
+    u01_error: float
     u02: float  # Impact parameter of the secondary source
+    u02_error: float
     t01: float  # Closest approach time of the primary source
+    t01_error: float
     t02: float  # Closest approach time of the secondary source
+    t02_error: float
     rho1: float  # Source radius for the primary source (internally fit in logarithmic (ln) scale)
-    number_of_parameters = 7
+    rho1_error: float
+    chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
 
     def __init__(self, file_to_be_read):
-        self.tE = file_to_be_read[0]
-        self.flux_ratio = file_to_be_read[1]
-        self.u01 = file_to_be_read[2]
-        self.u02 = file_to_be_read[3]
-        self.t01 = file_to_be_read[4]
-        self.t02 = file_to_be_read[5]
-        self.rho1 = file_to_be_read[6]
+        self.number_of_parameters = 7
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.tE = float(parameters[0])
+            self.tE_error = float(errors[0])
+            self.flux_ratio = float(parameters[1])
+            self.flux_ratio_error = float(errors[1])
+            self.u01 = float(parameters[2])
+            self.u01_error = float(errors[2])
+            self.u02 = float(parameters[3])
+            self.u02_error = float(errors[3])
+            self.t01 = float(parameters[4])
+            self.t01_error = float(errors[4])
+            self.t02 = float(parameters[5])
+            self.t02_error = float(errors[5])
+            self.rho1 = float(parameters[6])
+            self.rho1_error = float(errors[6])
+            self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[7]), float(parameters[9])
+            self.sources = float(parameters[8]), float(parameters[10])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
 
 
 @dataclass
@@ -106,8 +172,8 @@ class SingleLensBinarySourceWithXallarapBO:
     """
     BO	Single_lens_binary_source with xallarap
     10 parameters
-    TODO - not ready. file to be read not specified
     """
+    number_of_parameters: int
     u01: float  # Impact parameter of the primary source
     t01: float  # Closest approach time of the primary source
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
@@ -118,19 +184,38 @@ class SingleLensBinarySourceWithXallarapBO:
     inc: float  # Inclination of the orbital plane in radians
     phi: float  # Phase of the orbit from the passage on the line of nodes
     qs: float  # Mass ratio of the secondary to the primary source
-    number_of_parameters = 10
 
     def __init__(self, file_to_be_read):
-        self.u01 = file_to_be_read[0]
-        self.t01 = file_to_be_read[1]
-        self.tE = file_to_be_read[2]
-        self.rho1 = file_to_be_read[3]
-        self.xi1 = file_to_be_read[4]
-        self.xi2 = file_to_be_read[5]
-        self.omega = file_to_be_read[6]
-        self.inc = file_to_be_read[7]
-        self.phi = file_to_be_read[8]
-        self.qs = file_to_be_read[9]
+        self.number_of_parameters = 10
+        with open(file_to_be_read, 'r') as f:
+            lines = f.readlines()
+            parameters = lines[0].split(' ')
+            errors = lines[1].split(' ')
+            self.u01 = float(parameters[0])
+            self.u01_error = float(errors[0])
+            self.t01 = float(parameters[1])
+            self.t01_error = float(errors[1])
+            self.tE = float(parameters[2])
+            self.tE_error = float(errors[2])
+            self.rho1 = float(parameters[3])
+            self.rho1_error = float(errors[3])
+            self.xi1 = float(parameters[4])
+            self.xi1_error = float(errors[4])
+            self.xi2 = float(parameters[5])
+            self.xi2_error = float(errors[5])
+            self.omega = float(parameters[6])
+            self.omega_error = float(errors[6])
+            self.inc = float(parameters[7])
+            self.inc_error = float(errors[7])
+            self.phi = float(parameters[8])
+            self.phi_error = float(errors[8])
+            self.qs = float(parameters[9])
+            self.qs_error = float(errors[9])
+            self.chi2 = float(parameters[-1])
+            self.blends = float(parameters[10]), float(parameters[12])
+            self.sources = float(parameters[11]), float(parameters[13])
+            self.blending = np.array(self.blends) / np.array(self.sources)
+            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
 
 
 @dataclass
