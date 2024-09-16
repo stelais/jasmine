@@ -96,6 +96,6 @@ def makeline(dfline, deldot):
 
 
 if __name__ == '__main__':
-    satellite_folder = '/Users/jmbrashe/VBBOrbital/satellitedir/'
-    ephemerides_location = '/Users/jmbrashe/VBBOrbital/data-challenge-1/'
+    satellite_folder = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/event_004/satellitedir/'
+    ephemerides_location = '/Users/sishitan/Documents/Scripts/jasmine/data/'
     creating_ephemerides(satellite_folder_path_=satellite_folder, ephemerides_path_=ephemerides_location)
