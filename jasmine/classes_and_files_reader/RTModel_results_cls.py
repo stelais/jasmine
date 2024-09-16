@@ -46,6 +46,12 @@ class SingleLensSingleSourcePS:
     t0_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
     rho_error: float
+    chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
+
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 4
@@ -87,6 +93,12 @@ class SingleLensSingleSourceWithParallaxPX:
     piN_error: float
     piE: float  # Parallax component along East
     piE_error: float
+    chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
+
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 6
@@ -184,6 +196,12 @@ class SingleLensBinarySourceWithXallarapBO:
     inc: float  # Inclination of the orbital plane in radians
     phi: float  # Phase of the orbit from the passage on the line of nodes
     qs: float  # Mass ratio of the secondary to the primary source
+    chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
+
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 10
@@ -366,6 +384,11 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     gammaz: float  # Angular velocity along the line of sight
     gammaz_error: float
     chi2: float  # Chi2 value for the fit
+    blends: tuple
+    sources: tuple
+    blending: np.array
+    baseline: np.array
+
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 12
