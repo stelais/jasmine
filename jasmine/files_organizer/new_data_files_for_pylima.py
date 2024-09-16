@@ -14,8 +14,11 @@ def rtmodel_data_to_pylima(data_folder_path='None', data_output_folder_path='Non
         data_output_folder_path = data_output_folder_path + '/'
 
     # Reading the data into a DataFrame, skipping the first line which is a header comment
-    for filepath in [f'{data_folder_path}RomanW149sat1.dat', f'{data_folder_path}RomanZ087sat2.dat']:
-        data = pd.read_csv(filepath, delim_whitespace=True, skiprows=1, names=column_names)
+    for filepath in ['RomanW149sat1.dat', 'RomanZ087sat2.dat']:
+        data = pd.read_csv(f'{data_folder_path}{filepath}',
+                           delim_whitespace=True,
+                           skiprows=1,
+                           names=column_names)
 
         # Adding 2450000 to the third column
         data['HJD'] = data['HJD_minus_2450000'] + 2450000
