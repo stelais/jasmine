@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def rtmodel_data_to_pylima(data_folder_path='None', data_output_folder_path='None'):
+def rtmodel_data_to_pylima(data_folder_path='None', data_output_folder_path='None', event_number='None'):
     # Column names based on the file content
     column_names = ['Mag', 'err', 'HJD_minus_2450000']
     if data_folder_path == 'None':
@@ -25,7 +25,7 @@ def rtmodel_data_to_pylima(data_folder_path='None', data_output_folder_path='Non
         data = data.drop(columns=['HJD_minus_2450000'])
 
         # Saving the modified data to a new CSV file
-        output_txt_path = f'{data_output_folder_path}{filepath.split(".")[0]}_pylima.dat'
+        output_txt_path = f'{data_output_folder_path}{event_number:03}_{filepath.split(".")[0]}_pylima.dat'
         data.to_csv(output_txt_path, index=False, sep=' ', header=False)
 
 

@@ -1,6 +1,3 @@
-import pandas as pd
-
-
 # Function to convert RA from 'HH:MM:SS' to decimal degrees
 def ra_hms_to_deg(ra_hms):
     h, m, s = [float(i) for i in ra_hms.split(':')]
