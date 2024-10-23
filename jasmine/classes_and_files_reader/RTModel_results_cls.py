@@ -51,6 +51,7 @@ class SingleLensSingleSourcePS:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
 
 
     def __init__(self, file_to_be_read):
@@ -72,6 +73,13 @@ class SingleLensSingleSourcePS:
             self.sources = float(parameters[5]), float(parameters[7])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            # parameter dict
+            self.parameter_dict={}
+            self.parameter_dict['u0'] = (self.u0,self.u0_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t0'] = (self.t0,self.t0_error)
+            self.parameter_dict['rho'] = (self.rho,self.rho_error)
+
 
 
 @dataclass
@@ -98,6 +106,8 @@ class SingleLensSingleSourceWithParallaxPX:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
+
 
 
     def __init__(self, file_to_be_read):
@@ -123,6 +133,16 @@ class SingleLensSingleSourceWithParallaxPX:
             self.sources = float(parameters[7]), float(parameters[9])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            # parameter dict
+            self.parameter_dict={}
+            self.parameter_dict['u0'] = (self.u0,self.u0_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t0'] = (self.t0,self.t0_error)
+            self.parameter_dict['rho'] = (self.rho,self.rho_error)
+            self.parameter_dict['piN'] = (self.piN,self.piN_error)
+            self.parameter_dict['piE'] = (self.piE,self.piE_error)
+
+            
 
 
 @dataclass
@@ -151,6 +171,8 @@ class SingleLensBinarySourceBS:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
+
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 7
@@ -177,6 +199,15 @@ class SingleLensBinarySourceBS:
             self.sources = float(parameters[8]), float(parameters[10])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            # parameter dict
+            self.parameter_dict={}
+            self.parameter_dict['u01'] = (self.u01,self.u01_error)
+            self.parameter_dict['u02'] = (self.u02,self.u02_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t01'] = (self.t01,self.t01_error)
+            self.parameter_dict['t02'] = (self.t02,self.t02_error)
+            self.parameter_dict['rho1'] = (self.rho1,self.rho1_error)
+            self.parameter_dict['flux_ratio'] = (self.flux_ratio,self.flux_ratio_error)
 
 
 @dataclass
@@ -201,6 +232,7 @@ class SingleLensBinarySourceWithXallarapBO:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
 
 
     def __init__(self, file_to_be_read):
@@ -234,6 +266,20 @@ class SingleLensBinarySourceWithXallarapBO:
             self.sources = float(parameters[11]), float(parameters[13])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            # parameter dict
+            self.parameter_dict={}
+            self.parameter_dict['u01'] = (self.u01,self.u01_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t01'] = (self.t01,self.t01_error)
+            self.parameter_dict['rho1'] = (self.rho1,self.rho1_error)
+            self.parameter_dict['flux_ratio'] = (self.flux_ratio,self.flux_ratio_error)
+            self.parameter_dict['xi1'] = (self.xi1,self.xi1_error)
+            self.parameter_dict['xi2'] = (self.xi2,self.xi2_error)
+            self.parameter_dict['omega'] = (self.omega,self.omega_error)
+            self.parameter_dict['inc'] = (self.inc,self.inc_error)
+            self.parameter_dict['phi'] = (self.phi,self.phi_error)
+            self.parameter_dict['qs'] = (self.qs,self.qs_error)
+
 
 
 @dataclass
@@ -262,6 +308,7 @@ class BinaryLensSingleSourceLS:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 7
@@ -288,6 +335,15 @@ class BinaryLensSingleSourceLS:
             self.sources = float(parameters[8]), float(parameters[10])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            #add dictionary of parameters
+            self.parameter_dict={}
+            self.parameter_dict['u0'] = (self.u0,self.u0_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t0'] = (self.t0,self.t0_error)
+            self.parameter_dict['rho'] = (self.rho,self.rho_error)
+            self.parameter_dict['separation'] = (self.separation,self.separation_error)
+            self.parameter_dict['mass_ratio'] = (self.mass_ratio,self.mass_ratio_error)
+            self.parameter_dict['alpha'] = (self.alpha,self.alpha_error)
 
 
 @dataclass
@@ -320,6 +376,7 @@ class BinaryLensSingleSourceWithParallaxLX:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 9
@@ -350,6 +407,22 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.sources = float(parameters[10]), float(parameters[12])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            # parameter dictionary
+            self.parameter_dict={}
+            self.parameter_dict['u0'] = (self.u0,self.u0_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t0'] = (self.t0,self.t0_error)
+            self.parameter_dict['rho'] = (self.rho,self.rho_error)
+            self.parameter_dict['separation'] = (self.separation,self.separation_error)
+            self.parameter_dict['mass_ratio'] = (self.mass_ratio,self.mass_ratio_error)
+            self.parameter_dict['alpha'] = (self.alpha,self.alpha_error)
+            self.parameter_dict['piN'] = (self.piN,self.piN_error)
+            self.parameter_dict['piE'] = (self.piE,self.piE_error)
+
+
+
+
+
 
 
 @dataclass
@@ -388,6 +461,7 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     sources: tuple
     blending: np.array
     baseline: np.array
+    parameter_dict: dict
 
 
     def __init__(self, file_to_be_read):
@@ -425,3 +499,20 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.sources = float(parameters[13]), float(parameters[15])
             self.blending = np.array(self.blends) / np.array(self.sources)
             self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            # parameter dictionary
+            self.parameter_dict={}
+            self.parameter_dict['u0'] = (self.u0,self.u0_error)
+            self.parameter_dict['tE'] = (self.tE,self.tE_error)
+            self.parameter_dict['t0'] = (self.t0,self.t0_error)
+            self.parameter_dict['rho'] = (self.rho,self.rho_error)
+            self.parameter_dict['separation'] = (self.separation,self.separation_error)
+            self.parameter_dict['mass_ratio'] = (self.mass_ratio,self.mass_ratio_error)
+            self.parameter_dict['alpha'] = (self.alpha,self.alpha_error)
+            self.parameter_dict['piN'] = (self.piN,self.piN_error)
+            self.parameter_dict['piE'] = (self.piE,self.piE_error)
+            self.parameter_dict['gamma1'] = (self.gamma1,self.gamma1_error)
+            self.parameter_dict['gamma2'] = (self.gamma2,self.gamma2_error)
+            self.parameter_dict['gammaz'] = (self.gammaz,self.gammaz_error)
+
+        
+

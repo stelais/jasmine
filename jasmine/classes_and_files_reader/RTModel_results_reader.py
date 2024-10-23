@@ -147,9 +147,9 @@ if __name__ == '__main__':
     #                 f'RTModel/datachallenge_events/event_{event_number:03}')
     # models_per_chi2_rank(folder_path_)
     # get_summary_of_q_s_chi2_per_event(folder_path_)
-    root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
+    #root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
     # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
-
+    root_path = '~/VBBOrbital/emu_timing/timing_test_nobinning_os0/'
     for event_number in list_of_bound_planet_events:
         folder_path_ = f'{root_path}event_{event_number:03}'
         models_per_chi2_rank(folder_path_)
