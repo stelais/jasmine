@@ -28,6 +28,15 @@ class LightcurveEventGULLSRGES:
         lightcurve_df_list = grr.lightcurve_data_reader(self.event_info.event_subrun,self.event_info.event_id, folder_path_=self.data_folder)
         return lightcurve_df_list
 
+    def microlensing_signal(self):
+        """
+        This function reads the microlensing signal data and returns a tuple of pandas dataframes with the columns
+        :param folder_path_:
+        :return:
+        """
+        microlensing_df_list = grr.microlensing_signal_reader(self.event_info.event_subrun,self.event_info.event_id, folder_path_=self.data_folder)
+        return microlensing_df_list
+
 
 @dataclass
 class EventInformation:

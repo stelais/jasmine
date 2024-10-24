@@ -47,6 +47,28 @@ def lightcurve_data_reader(SubRun,ID, *, folder_path_='data'):
     return lightcurve_list
 
 
+def microlensing_signal_reader(SubRun,ID, *, folder_path_='data'):
+    fname = f'OMPLLD_croin_cassan_{SubRun}_0_{ID}.det.lc'
+
+    with open(f'{folder_path_}/{fname}', 'r') as f:
+        fs = f.readline()
+        fs = np.array(fs.split(' ')[1:4]).astype(float)
+        f.readline()
+        f.readline()
+        m_source = f.readline()
+        m_source = np.array(m_source.split(' ')[1:4]).astype(float)
+    columns = ['Simulation_time', 'measured_relative_flux', 'measured_relative_flux_error', 'true_relative_flux',
+               'true_relative_flux_error', 'observatory_code', 'saturation_flag', 'best_single_lens_fit',
+               'parallax_shift_t', 'parallax_shift_u', 'BJD', 'source_x', 'source_y', 'lens1_x', 'lens1_y', 'lens2_x',
+               'lens2_y']
+    lightcurve_data_df = pd.read_csv(f'{folder_path_}/{fname}', names=columns, comment='#', sep='\s+')
+    lightcurve_list = []
+    for observatory_code in range(3):
+        obs_data = lightcurve_data_df[lightcurve_data_df['observatory_code']==observatory_code]
+        lightcurve_list.append(obs_data[['Simulation_time','true_relative_flux','true_relative_flux_error']])
+    return lightcurve_list
+
+
 if __name__ == '__main__':
     print('')
     #lc_type = what_type_of_lightcurve(2)
