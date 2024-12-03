@@ -4,15 +4,14 @@ import jasmine.classes_and_files_reader.new_gullsrges_reader as grr
 import pandas as pd
 
 class LightcurveEventGULLSRGES_NameBased:
-    def __init__(self, lightcurve_name, sample_folder='../data/gulls_orbital_motion_extracted/',
+    def __init__(self, lightcurve_name, data_folder='../data/gulls_orbital_motion_extracted/',
                  master_file_path='../data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'):
         # This is for the new team-simulations release (from 2024Nov).
         master_df = pd.read_csv(master_file_path)
         self.lightcurve_name = lightcurve_name #e.g. OMPLDG_croin_cassan_0_642_57.det.lc
-        self.lcname = 'OMPLDG_croin_cassan/'+lightcurve_name
-        self.lightcurve_master = master_df[master_df.lcname == self.lcname]
+        self.lightcurve_master = master_df[master_df.lcname == self.lightcurve_name]
         self.event_info = EventInformation(self.lightcurve_master)
-        self.sample_folder = sample_folder
+        self.sample_folder = data_folder
         self.light_curve_path = f"{self.sample_folder}/{self.lightcurve_name}"
         self.source = SourceStarProperties(self.lightcurve_master)
         self.weights_and_flags = WeightAndFlags(self.lightcurve_master)

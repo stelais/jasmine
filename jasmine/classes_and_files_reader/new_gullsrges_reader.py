@@ -45,14 +45,12 @@ def lightcurve_data_reader(SubRun, Field, ID, *, folder_path_='data', include_ep
     for observatory_code in range(3):
         obs_data = lightcurve_data_df[lightcurve_data_df['observatory_code'] == observatory_code]
         mag_constant = m_source[observatory_code] + 2.5 * np.log10(fs[observatory_code])
-        measured_relative_flux = obs_data.loc[:, 'measured_relative_flux']
         if np.min(obs_data['measured_relative_flux']) < 0:
-            obs_data['measured_relative_flux'] = obs_data['measured_relative_flux'] - np.min(
-                obs_data['measured_relative_flux']) + 1e-6
-            print()
-        measured_relative_flux_error = obs_data.loc[:, 'measured_relative_flux_error']
-        mag = - 2.5 * np.log10(measured_relative_flux) + mag_constant
-        mag_err = (2.5 / (np.log(10))) * measured_relative_flux_error / measured_relative_flux
+            obs_data.loc[:, 'measured_relative_flux'] = obs_data['measured_relative_flux'] - np.min(
+                obs_data['measured_relative_flux']) + 1e-5
+        measured_relative_flux_error = obs_data['measured_relative_flux_error']
+        mag = - 2.5 * np.log10(obs_data['measured_relative_flux']) + mag_constant
+        mag_err = (2.5 / (np.log(10))) * measured_relative_flux_error / obs_data['measured_relative_flux']
         obs_data.insert(loc=obs_data.shape[1], column='mag', value=mag)
         obs_data.insert(loc=obs_data.shape[1], column='mag_err', value=mag_err)
         lightcurve_list.append(obs_data[['mag', 'mag_err', 'days']])
