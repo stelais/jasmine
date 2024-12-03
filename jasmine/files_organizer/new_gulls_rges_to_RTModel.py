@@ -4,8 +4,7 @@ You also need to use
 """
 import os
 import pandas as pd
-import numpy as np
-import jasmine.classes_and_files_reader.gullsrges_lightcurve_cls as lc
+import jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls as lc
 from jasmine.files_organizer.limb_darkening_parameters import *
 from astropy.coordinates import SkyCoord
 from astropy import units
@@ -101,8 +100,8 @@ def creating_files(*, sample_index,subrun,event_id,
 
 
 if __name__ == '__main__':
-    folder_to_be_created = '/Users/jmbrashe/VBBOrbital/GULLS/events'
-    input_folder = '/Volumes/JonDrive/GULLS/gulls_orbital_motion/repsample'
-    satellite_folder = '/Users/jmbrashe/VBBOrbital/GULLS/satellitedir'
+    folder_to_be_created = '/discover/nobackup/sishitan/orbital_task/RTModel_runs'
+    master_input_folder = '/discover/nobackup/sishitan/orbital_task/data/gulls_orbital_motion_extracted'
+    data_input_folder = '/discover/nobackup/sishitan/orbital_task/data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan_sample'
     creating_all_directories(folder_path_=folder_to_be_created,
-                             master_input_folder_path_=input_folder, data_input_folder_path_=input_folder)
+                             master_input_folder_path_=master_input_folder, data_input_folder_path_=data_input_folder)
