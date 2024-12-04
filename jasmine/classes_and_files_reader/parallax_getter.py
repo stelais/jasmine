@@ -29,8 +29,8 @@ def get_summary_of_parallax_per_event(folder_path_):
                         'field': [field,],
                         'event_id': [event_id,],
                         'true_piE': [true_pie, ],
-                        'true_piEE': [true_piee, ],
-                        'true_piEN': [true_pien, ]}
+                        'true_piEN': [true_pien, ],
+                        'true_piEE': [true_piee, ]}
 
     for model_name in top_1_of_each['model']:
         model_type = model_name[0:2]

@@ -67,18 +67,20 @@ if __name__ == '__main__':
     # root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
     # # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
 
-    general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
-    # general_path_ = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
-    list_of_events = ['event_0_1000_1445',
-                      'event_0_42_2848',
-                      'event_0_762_407',
-                      'event_0_876_1031',
-                      'event_0_992_224',
-                      'event_1_793_3191',
-                      'event_0_42_270',
-                      'event_0_672_2455',
-                      'event_0_798_371',
-                      'event_0_922_1199',
-                      'event_1_755_564']
+    # general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
+    # list_of_events = ['event_0_42_2848',
+    #                   'event_0_762_407',
+    #                   'event_0_876_1031',
+    #                   'event_0_992_224',
+    #                   'event_1_793_3191',
+    #                   'event_0_42_270',
+    #                   'event_0_672_2455',
+    #                   'event_0_798_371',
+    #                   'event_0_922_1199',
+    #                   'event_1_755_564']
+    #
+    general_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
+    list_of_events = ['event_0_42_270',]
+    # 'event_0_1000_1445',
 
     main(general_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event='top10_piE')

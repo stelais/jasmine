@@ -311,10 +311,10 @@ class BinaryLensSingleSourceWithParallaxLX:
     tE_error: float
     t0: float  # Closest approach time in HJD to the barycenter
     t0_error: float
-    piN: float  # Parallax component along North
-    piN_error: float
-    piE: float  # Parallax component along East
-    piE_error: float
+    piEN: float  # Parallax component along North
+    piEN_error: float
+    piEE: float  # Parallax component along East
+    piEE_error: float
     chi2: float  # Chi2 value for the fit
     blends: tuple
     sources: tuple
@@ -341,10 +341,10 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.tE_error = float(errors[5])
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
-            self.piN = float(parameters[7])
-            self.piN_error = float(errors[7])
-            self.piE = float(parameters[8])
-            self.piE_error = float(errors[8])
+            self.piEN = float(parameters[7])
+            self.piEN_error = float(errors[7])
+            self.piEE = float(parameters[8])
+            self.piEE_error = float(errors[8])
             self.chi2 = float(parameters[-1])
             self.blends = float(parameters[9]), float(parameters[11])
             self.sources = float(parameters[10]), float(parameters[12])
@@ -373,10 +373,10 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     tE_error: float
     t0: float  # Closest approach time in HJD to the barycenter
     t0_error: float
-    piN: float  # Parallax component along North
-    piN_error: float
-    piE: float  # Parallax component along East
-    piE_error: float
+    piEN: float  # Parallax component along North
+    piEN_error: float
+    piEE: float  # Parallax component along East
+    piEE_error: float
     gamma1: float  # Angular velocity parallel to the lens axis
     gamma1_error: float
     gamma2: float  # Angular velocity perpendicular to the lens axis
@@ -410,10 +410,10 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.tE_error = float(errors[5])
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
-            self.piN = float(parameters[7])
-            self.piN_error = float(errors[7])
-            self.piE = float(parameters[8])
-            self.piE_error = float(errors[8])
+            self.piEN = float(parameters[7])
+            self.piEN_error = float(errors[7])
+            self.piEE = float(parameters[8])
+            self.piEE_error = float(errors[8])
             self.gamma1 = float(parameters[9])
             self.gamma1_error = float(errors[9])
             self.gamma2 = float(parameters[10])
