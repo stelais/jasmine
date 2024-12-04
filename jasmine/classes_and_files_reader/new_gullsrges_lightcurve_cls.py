@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import jasmine.classes_and_files_reader.new_gullsrges_reader as grr
 import pandas as pd
 
+
 class LightcurveEventGULLSRGES_NameBased:
     def __init__(self, lightcurve_name, data_folder='../data/gulls_orbital_motion_extracted/',
                  master_file_path='../data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'):
@@ -262,7 +263,7 @@ class MicrolensingParameters:
     """
     Microlensing Event Properties: Parameters such as the impact parameter (u0), event angle (alpha),
     time of maximum magnification (t0), Einstein crossing time (tE), Einstein radius (rE), theta_E (thE),
-    parallax effect (piE), source radius in Einstein radii (rhos), relative proper motion (murel),
+    parallax effect (piEE), source radius in Einstein radii (rhos), relative proper motion (murel),
     transverse velocity (vt), and shear (gamma).
 
     Blending Flux (fs): The blending parameter, which is crucial for determining the combined
@@ -329,7 +330,7 @@ class MicrolensingParameters:
         self.microlensing_source_radius_in_einstein_radii_rho = lightcurve_master['rho'].values[0]
 
         # Parallax
-        self.microlensing_parallax_effect_piE = lightcurve_master['piE'].values[0]
+        self.microlensing_parallax_effect_piE = lightcurve_master['piEE'].values[0]
         self.microlensing_parallax_effect_piE_East = lightcurve_master['piEE'].values[0]
         self.microlensing_parallax_effect_piE_North = lightcurve_master['piEN'].values[0]
         self.microlensing_parallax_effect_piE_par = lightcurve_master['piEll'].values[0]

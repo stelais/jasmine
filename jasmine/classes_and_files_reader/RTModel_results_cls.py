@@ -89,10 +89,10 @@ class SingleLensSingleSourceWithParallaxPX:
     t0_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
     rho_error: float
-    piN: float  # Parallax component along North
-    piN_error: float
-    piE: float  # Parallax component along East
-    piE_error: float
+    piEN: float  # Parallax component along North
+    piEN_error: float
+    piEE: float  # Parallax component along East
+    piEE_error: float
     chi2: float  # Chi2 value for the fit
     blends: tuple
     sources: tuple
@@ -114,10 +114,10 @@ class SingleLensSingleSourceWithParallaxPX:
             self.t0_error = float(errors[2])
             self.rho = float(parameters[3])
             self.rho_error = float(errors[3])
-            self.piN = float(parameters[4])
-            self.piN_error = float(errors[4])
-            self.piE = float(parameters[5])
-            self.piE_error = float(errors[5])
+            self.piEN = float(parameters[4])
+            self.piEN_error = float(errors[4])
+            self.piEE = float(parameters[5])
+            self.piEE_error = float(errors[5])
             self.chi2 = float(parameters[-1])
             self.blends = float(parameters[6]), float(parameters[8])
             self.sources = float(parameters[7]), float(parameters[9])
