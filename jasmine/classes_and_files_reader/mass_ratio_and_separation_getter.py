@@ -7,7 +7,6 @@ def get_summary_of_q_s_chi2_per_event(folder_path_, are_there_binary_solutions_)
     """
     This function creates a summary of q and s for the top 1 models + trues values for the given event
     """
-    top_1_of_each = pd.read_csv(folder_path_ + '/Models/chi2_top1_of_each_binary_lens_model.csv')
     general_path_ = folder_path_.split('/RTModel_runs')[0] + '/data/gulls_orbital_motion_extracted'
     master_file_path = f'{general_path_}/OMPLDG_croin_cassan.sample.csv'
     data_folder_path = f'{general_path_}/OMPLDG_croin_cassan_sample'
@@ -29,6 +28,7 @@ def get_summary_of_q_s_chi2_per_event(folder_path_, are_there_binary_solutions_)
                         'true_q': [true_q, ],
                         'true_s': [true_s, ], }
     if are_there_binary_solutions_:
+        top_1_of_each = pd.read_csv(folder_path_ + '/Models/chi2_top1_of_each_binary_lens_model.csv')
         for model_name in top_1_of_each['model']:
             model_type = model_name[0:2]
             model_path = folder_path_ + '/Models/' + model_name + '.txt'
