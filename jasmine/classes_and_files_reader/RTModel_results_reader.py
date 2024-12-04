@@ -93,4 +93,4 @@ if __name__ == '__main__':
     # list_of_events = ['event_0_42_270',]
     # # 'event_0_1000_1445',
 
-    main(general_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event='top10_piE')
+    main(general_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event_='top10_piE')
