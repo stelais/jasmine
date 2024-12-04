@@ -34,24 +34,34 @@ def models_per_chi2_rank(folder_path_):
     only_ls = chi2_df[chi2_df['model'].str.contains('LS')]
     only_lx = chi2_df[chi2_df['model'].str.contains('LX')]
     only_lo = chi2_df[chi2_df['model'].str.contains('LO')]
-    top_1_of_each = pd.concat([only_ls.iloc[[0]], only_lx.iloc[[0]], only_lo.iloc[[0]]])
-    top_1_of_each.to_csv(folder_path_ + '/Models/chi2_top1_of_each_binary_lens_model.csv', index=False)
+    # top_1_of_each = pd.concat([only_ls.iloc[[0]], only_lx.iloc[[0]], only_lo.iloc[[0]]])
+
+    # Collect the top 1 row from each type if available
+    dfs_to_concat = [df.iloc[[0]] for df in [only_ls, only_lx, only_lo] if not df.empty]
+
+    if dfs_to_concat:
+        top_1_of_each = pd.concat(dfs_to_concat, ignore_index=True)
+        # Save the concatenated result to CSV
+        top_1_of_each.to_csv(folder_path_ + '/Models/chi2_top1_of_each_binary_lens_model.csv', index=False)
+        return True
+    else:
+        print("No valid models to concatenate. Skipping creation of 'chi2_top1_of_each_binary_lens_model.csv'.")
+        return False
 
 
-def main(general_path_, list_of_events_, parallax=True, mass_ratio_and_separation=True, type_of_event='top10_piE'):
+def main(general_path_, list_of_events_, parallax=True, mass_ratio_and_separation=True, type_of_event_='top10_piE'):
     for event in list_of_events_:
         folder_path_ = f'{general_path_}/{event}'
-        models_per_chi2_rank(folder_path_)
-
+        are_there_binary_solutions = models_per_chi2_rank(folder_path_)
         if mass_ratio_and_separation:
-            q_s_getter.get_summary_of_q_s_chi2_per_event(folder_path_)
+            q_s_getter.get_summary_of_q_s_chi2_per_event(folder_path_, are_there_binary_solutions)
         if parallax:
-            pie_getter.get_summary_of_parallax_per_event(folder_path_)
+            pie_getter.get_summary_of_parallax_per_event(folder_path_, are_there_binary_solutions)
 
     if mass_ratio_and_separation:
-        q_s_getter.event_summary_q_s_wrapper(general_path_, list_of_events_, type_of_event)
+        q_s_getter.event_summary_q_s_wrapper(general_path_, list_of_events_, type_of_event_)
     if parallax:
-        pie_getter.event_summary_parallax_wrapper(general_path_, list_of_events_, type_of_event)
+        pie_getter.event_summary_parallax_wrapper(general_path_, list_of_events_, type_of_event_)
 
 
 if __name__ == '__main__':
@@ -67,20 +77,20 @@ if __name__ == '__main__':
     # root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
     # # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
 
-    # general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
-    # list_of_events = ['event_0_42_2848',
-    #                   'event_0_762_407',
-    #                   'event_0_876_1031',
-    #                   'event_0_992_224',
-    #                   'event_1_793_3191',
-    #                   'event_0_42_270',
-    #                   'event_0_672_2455',
-    #                   'event_0_798_371',
-    #                   'event_0_922_1199',
-    #                   'event_1_755_564']
+    general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
+    list_of_events = ['event_0_42_2848',
+                      'event_0_762_407',
+                      'event_0_876_1031',
+                      'event_0_992_224',
+                      'event_1_793_3191',
+                      'event_0_42_270',
+                      'event_0_672_2455',
+                      'event_0_798_371',
+                      'event_0_922_1199',
+                      'event_1_755_564']
     #
-    general_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
-    list_of_events = ['event_0_42_270',]
-    # 'event_0_1000_1445',
+    # general_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
+    # list_of_events = ['event_0_42_270',]
+    # # 'event_0_1000_1445',
 
     main(general_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event='top10_piE')

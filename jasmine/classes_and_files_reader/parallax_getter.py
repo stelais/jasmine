@@ -4,7 +4,7 @@ from jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls import Lightc
 import pandas as pd
 
 
-def get_summary_of_parallax_per_event(folder_path_):
+def get_summary_of_parallax_per_event(folder_path_, are_there_binary_solutions_):
     """
     This function creates a summary of piEN and piEE for the top 1 models + trues values for the given event
     """
@@ -31,17 +31,17 @@ def get_summary_of_parallax_per_event(folder_path_):
                         'true_piE': [true_pie, ],
                         'true_piEN': [true_pien, ],
                         'true_piEE': [true_piee, ]}
-
-    for model_name in top_1_of_each['model']:
-        model_type = model_name[0:2]
-        if model_type == 'LO' or model_type == 'LX':
-            model_path = folder_path_ + '/Models/' + model_name + '.txt'
-            model_parameters = ModelResults(model_path).model_parameters
-            data_to_be_saved[f'{model_type}_piEN'] = [model_parameters.piEN, ]
-            data_to_be_saved[f'{model_type}_piEN_error'] = [model_parameters.piEN_error, ]
-            data_to_be_saved[f'{model_type}_piEE'] = [model_parameters.piEE, ]
-            data_to_be_saved[f'{model_type}_piEE_error'] = [model_parameters.piEE_error, ]
-            data_to_be_saved[f'{model_type}_chi2'] = [model_parameters.chi2,]
+    if are_there_binary_solutions_:
+        for model_name in top_1_of_each['model']:
+            model_type = model_name[0:2]
+            if model_type == 'LO' or model_type == 'LX':
+                model_path = folder_path_ + '/Models/' + model_name + '.txt'
+                model_parameters = ModelResults(model_path).model_parameters
+                data_to_be_saved[f'{model_type}_piEN'] = [model_parameters.piEN, ]
+                data_to_be_saved[f'{model_type}_piEN_error'] = [model_parameters.piEN_error, ]
+                data_to_be_saved[f'{model_type}_piEE'] = [model_parameters.piEE, ]
+                data_to_be_saved[f'{model_type}_piEE_error'] = [model_parameters.piEE_error, ]
+                data_to_be_saved[f'{model_type}_chi2'] = [model_parameters.chi2,]
     event_summary = pd.DataFrame(data_to_be_saved)
     event_summary.to_csv(folder_path_ + '/Models/event_summary_parallax.csv', index=False)
     return event_summary
@@ -71,5 +71,5 @@ if __name__ == '__main__':
 
     for event in list_of_events:
         folder_path = f'{general_path}/{event}'
-        get_summary_of_parallax_per_event(folder_path)
+        get_summary_of_parallax_per_event(folder_path, True)
     event_summary_parallax_wrapper(general_path, list_of_events, type_of_event)
