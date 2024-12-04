@@ -45,7 +45,9 @@ def models_per_chi2_rank(folder_path_):
         top_1_of_each.to_csv(folder_path_ + '/Models/chi2_top1_of_each_binary_lens_model.csv', index=False)
         return True
     else:
-        print("No valid models to concatenate. Skipping creation of 'chi2_top1_of_each_binary_lens_model.csv'.")
+        event_name = folder_path_.split('/')[-1]
+        print(f"No valid models to concatenate. "
+              f"Skipping creation of 'chi2_top1_of_each_binary_lens_model.csv' for {event_name}.")
         return False
 
 
@@ -78,16 +80,17 @@ if __name__ == '__main__':
     # # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
 
     general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
-    list_of_events = ['event_0_42_2848',
-                      'event_0_762_407',
+    list_of_events = ['event_0_762_407',
                       'event_0_876_1031',
-                      'event_0_992_224',
                       'event_1_793_3191',
                       'event_0_42_270',
-                      'event_0_672_2455',
-                      'event_0_798_371',
                       'event_0_922_1199',
-                      'event_1_755_564']
+                      'event_0_672_2455',
+                      'event_0_992_224',
+                      'event_0_42_2848',
+                      'event_1_755_564',
+                      'event_0_798_371']
+
     #
     # general_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
     # list_of_events = ['event_0_42_270',]
