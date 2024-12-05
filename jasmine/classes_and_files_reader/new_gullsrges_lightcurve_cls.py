@@ -9,7 +9,7 @@ class LightcurveEventGULLSRGES_NameBased:
                  master_file_path='../data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'):
         # This is for the new team-simulations release (from 2024Nov).
         master_df = pd.read_csv(master_file_path)
-        self.lightcurve_name = lightcurve_name #e.g. OMPLDG_croin_cassan_0_642_57.det.lc
+        self.lightcurve_name = lightcurve_name  #e.g. OMPLDG_croin_cassan_0_642_57.det.lc
         self.lightcurve_master = master_df[master_df.lcname == self.lightcurve_name]
         self.event_info = EventInformation(self.lightcurve_master)
         self.sample_folder = data_folder
@@ -46,6 +46,18 @@ class LightcurveEventGULLSRGES_NameBased:
                                                               include_ephem=True)
         return microlensing_df_list
 
+    def whole_lightcurve(self):
+        """
+        This function reads the whole lightcurve data and returns a pandas dataframe with the columns
+        :param folder_to_be_created_path_:
+        :return:
+        """
+        lightcurve_df = grr.whole_columns_lightcurve_reader(self.event_info.event_subrun,
+                                                            self.event_info.event_field,
+                                                            self.event_info.event_id,
+                                                            folder_path_=self.sample_folder,
+                                                            include_ephem=True)
+        return lightcurve_df
 
 
 @dataclass
