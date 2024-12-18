@@ -9,64 +9,52 @@ from astropy.time import Time
 
 def creating_ephemerides_from_lc(*,
                                  satellite_folder_path_='/Users/jmbrashe/VBBOrbital/satellitedir',
-                                 eph_list):
+                                 pre_ephemeris_from_lightcurve):
     if os.path.isdir(satellite_folder_path_):
         print(f'Directory {satellite_folder_path_} already exists! Continuing to file creation.')
     else:
         os.mkdir(satellite_folder_path_)
         print(f'Folder {satellite_folder_path_} created!')
-    solar_system_ephemeris.set('de432s')   # The planetary ephemeris DE432 is
+    solar_system_ephemeris.set('de432s')  # The planetary ephemeris DE432 is
     # based on the ephemeris DE430 (Folkner et al. 2014; default if 'jpl').
     # The main difference between DE432 and DE430 is an update of the estimated orbit of
     # the Pluto system barycenter to support the New Horizons project.
-    filters = ['W146', 'Z087', 'K213']
+
+    roman_filters = ['W146', 'Z087', 'K213']
     deldot_str = '{:>11}'.format('0.0000000')  # string of zeros for the delta r column
-    names = ['BJD', 'X_EQ', 'Y_EQ', 'Z_EQ']  # names of data challenge ephemerides columns
-    au_per_km = 1 / 149_597_870.700  # for conversion
-    for i in range(len(filters)):
-        ephname_ = f'satellite{i + 1}.txt'
-        if os.path.exists(f'{satellite_folder_path_}/{ephname_}'):
-            raise FileExistsError(f'Ephemerides file {ephname_} already exists in directory {satellite_folder_path_}')
+
+    for filter_index in range(len(roman_filters)):
+        filter_ephemeris_name_ = f'satellite{filter_index + 1}.txt'  # file to be created
+        if os.path.exists(f'{satellite_folder_path_}/{filter_ephemeris_name_}'):
+            raise FileExistsError(
+                f'Ephemerides file {filter_ephemeris_name_} already exists in directory {satellite_folder_path_}')
         else:
-            eph_df = eph_list[i]
+            eph_df = pre_ephemeris_from_lightcurve[filter_index]  # dataframe per filter
             eph_df = eph_df.reset_index(drop=True)
-            # ecliptic_coords = SkyCoord(x=eph_df.iloc[:, 1], y=eph_df.iloc[:, 2], z=eph_df.iloc[:, 3],
-            #                            unit='au', frame='barycentrictrueecliptic', obstime='J2000',
-            #                            representation_type='cartesian')
-            # eq_coords = ecliptic_coords.transform_to('icrs')
-            # eq_coords.representation_type = 'cartesian'
-            # SIS edits:
-            ecliptic_coords = SkyCoord(x=eph_df['X_EQ'], y=eph_df['Y_EQ'], z=eph_df['Z_EQ'],
-                                       unit='au', frame='geocentrictrueecliptic', obstime='J2000',
+
+            # Load it as ecliptic coordinates
+            # barycentrictrueecliptic
+            ecliptic_coords = SkyCoord(x=eph_df['X_EQ'] / 3, y=eph_df['Y_EQ'] / 3, z=eph_df['Z_EQ'] / 3,
+                                       unit='au', frame='barycentrictrueecliptic', obstime='J2000',
                                        representation_type='cartesian')
 
-            # Transform to ICRS (barycentric coordinates)
+            # Transform ecliptic to ICRS (barycentric coordinates)
             icrs_coords = ecliptic_coords.transform_to('icrs')
-            # Extract the Cartesian coordinates in AU
+
+            # Extract the Cartesian coordinates in AU  + roman location needed to distance to Earth
             icrs_cartesian = icrs_coords.cartesian
             roman_loc = pd.DataFrame({
                 'x': icrs_cartesian.x.value,
                 'y': icrs_cartesian.y.value,
                 'z': icrs_cartesian.z.value,
-                'total': np.sqrt(icrs_cartesian.x.value**2 + icrs_cartesian.y.value**2 + icrs_cartesian.z.value**2)})
+                'total': np.sqrt(
+                    icrs_cartesian.x.value ** 2 + icrs_cartesian.y.value ** 2 + icrs_cartesian.z.value ** 2)})
 
-            # eq_coords = ecliptic_coords.transform_to('icrs')
-            # # eq_coords = ecliptic_coords.transform_to('icrs') # SIS commented out
-            print("Ecliptic coords (AU):", ecliptic_coords)
-            print("ICRS coords (AU):", roman_loc)
-
-            ###
-            # Get earth location in cartesian ICRS to calculate actual distance ...
+            # EARTH
             t = Time(eph_df['BJD'], format='jd')
             print(eph_df['BJD'])
-            # print(t)
-            # eloc = get_body_barycentric('earth', t)
-            # earth_loc = SkyCoord(eloc, unit='km', frame='icrs', obstime='J2000', representation_type='cartesian')
-            # earth_loc = earth_loc.to_table().to_pandas()
-            # earth_loc = earth_loc * au_per_km
-            # roman_loc = eq_coords.to_table().to_pandas()
 
-            # SIS EARTH
+            # Get earth location in cartesian ICRS to calculate actual distance ...
             earth_barycentric = get_body_barycentric('earth', t)  # Already returns a SkyCoord object in ICRS
             # Convert to Cartesian representation and ensure units are in AU
             earth_barycentric_au = earth_barycentric.xyz.to('AU')
@@ -74,33 +62,33 @@ def creating_ephemerides_from_lc(*,
             data = {'x': earth_barycentric_au[0].value,
                     'y': earth_barycentric_au[1].value,
                     'z': earth_barycentric_au[2].value,
-                    'total': np.sqrt(earth_barycentric_au[0].value**2 +
-                                     earth_barycentric_au[1].value**2 +
-                                     earth_barycentric_au[2].value**2)}  # Extract values from Quantity
-            earth_loc = pd.DataFrame(data) # Transform to DataFrame if needed
+                    'total': np.sqrt(earth_barycentric_au[0].value ** 2 +
+                                     earth_barycentric_au[1].value ** 2 +
+                                     earth_barycentric_au[2].value ** 2)}  # Extract values from Quantity
+            earth_loc = pd.DataFrame(data)  # Transform to DataFrame if needed
 
-            roman_earth_distance = (roman_loc - earth_loc) ** 2
-            roman_earth_distance = roman_earth_distance.sum(axis=1)
-            roman_earth_distance = np.sqrt(roman_earth_distance)
+            # Distance calculated by axes
+            roman_earth_distance_3D = (roman_loc - earth_loc)
+            roman_earth_distance = np.sqrt(roman_earth_distance_3D.x ** 2 +
+                                           roman_earth_distance_3D.y ** 2 +
+                                           roman_earth_distance_3D.z ** 2)
 
-
-
-            roman_loc.representation_type = 'spherical'
-            eq_coords = roman_loc.to_table().to_pandas()
+            # Finalize what columns are needed
+            eq_coords = icrs_coords.to_table().to_pandas()
             eq_coords['distance'] = roman_earth_distance
             eq_coords['delta_dot'] = np.zeros(eq_coords.shape[0])
             eq_coords['BJD'] = eph_df['BJD']
-            print(eq_coords.shape, eph_df.shape)
-            print(eq_coords['BJD'])
             eq_coords = eq_coords[['BJD', 'ra', 'dec', 'distance', 'delta_dot']]
-            with open(f'{satellite_folder_path_}/{ephname_}', 'w') as f:
+
+            # Save
+            with open(f'{satellite_folder_path_}/{filter_ephemeris_name_}', 'w') as f:
                 f.write('$$SOE\n')
                 for j in range(eq_coords.shape[0]):
                     line = makeline(eq_coords.iloc[j, 0:4], deldot_str)
 
                     f.write(line)
                 f.write('$$EOE')
-            print(f'File {ephname_} created in {satellite_folder_path_}.')
+            print(f'File {filter_ephemeris_name_} created in {satellite_folder_path_}.')
 
 
 def ephemeris_data_reader(SubRun, Field, ID, *, folder_path_='data'):
@@ -171,5 +159,5 @@ if __name__ == "__main__":
     general_path = '/Users/stela/Documents/Scripts/orbital_task/data'
     eph_list = ephemeris_data_reader(0, 163, 1174,
                                      folder_path_=f'{general_path}/gulls_orbital_motion_extracted/OMPLDG_croin_cassan_sample')
-    creating_ephemerides_from_lc(satellite_folder_path_=f'{general_path}/satellitedir',
-                                 eph_list=eph_list)
+    creating_ephemerides_from_lc(satellite_folder_path_=f'{general_path}/satellitedir_SIS',
+                                 pre_ephemeris_from_lightcurve=eph_list)
