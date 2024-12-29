@@ -159,5 +159,5 @@ if __name__ == "__main__":
     general_path = '/Users/stela/Documents/Scripts/orbital_task/data'
     eph_list = ephemeris_data_reader(0, 163, 1174,
                                      folder_path_=f'{general_path}/gulls_orbital_motion_extracted/OMPLDG_croin_cassan_sample')
-    creating_ephemerides_from_lc(satellite_folder_path_=f'{general_path}/satellitedir_SIS',
+    creating_ephemerides_from_lc(satellite_folder_path_=f'{general_path}/satellitedir',
                                  pre_ephemeris_from_lightcurve=eph_list)
