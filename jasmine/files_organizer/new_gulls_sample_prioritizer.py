@@ -40,9 +40,36 @@ def make_sbatch_commands(project_path_, general_path_, file_path_):
     print(f"Submission script saved to {bash_path}/submission_common.sh")
 
 
+def make_sample_sbatch_commands(project_path_, general_path_, file_path_):
+    sample_df = pd.read_csv(project_path_ + general_path_ + file_path_)
+    filtered_df = mass_and_distance_filter(project_path_ + general_path_, file_path_, is_saving=False)
+
+    # Merge the two dataframes to find common rows
+    common_rows = sample_df.merge(filtered_df)
+    # Drop the common rows from sample_df
+    sample_df_cleaned = sample_df.loc[~sample_df.index.isin(common_rows.index)]
+
+    bash_path = f'{project_path_}bash_scripts'
+
+    # Open the file for writing
+    with open(f'{bash_path}/submission_sample.sh', 'w') as f:
+        # Iterate over the rows of the DataFrame
+        for index, row in sample_df_cleaned.iterrows():
+            # Extract the values for SubRun, Field, and EventID
+            subrun = row['SubRun']
+            field = row['Field']
+            event_id = row['EventID']
+
+            # Write the sbatch command to the file
+            f.write(f'sbatch bash_scripts/rtmodel_new.sh {subrun} {field} {event_id}\n')
+
+    print(f"Submission script saved to {bash_path}/submission_sample.sh")
+
+
 if __name__ == "__main__":
     project_path = '/Users/stela/Documents/Scripts/orbital_task/'
     general_path = 'data/gulls_orbital_motion_extracted/'
     file_path = 'OMPLDG_croin_cassan.sample.csv'
     # mass_and_distance_filter(project_path+general_path, file_path)
-    make_sbatch_commands(project_path, general_path, file_path)
+    # make_sbatch_commands(project_path, general_path, file_path)
+    make_sample_sbatch_commands(project_path, general_path, file_path)
