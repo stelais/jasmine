@@ -5,7 +5,7 @@ You also need to use
 import os
 import pandas as pd
 import jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls as lc
-from jasmine.files_organizer.limb_darkening_parameters import *
+from jasmine.constants.limb_darkening_parameters import *
 from astropy.coordinates import SkyCoord
 from astropy import units
 
