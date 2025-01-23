@@ -1,4 +1,9 @@
+"""
+Called by RTModel_results_reader.py - check that
+"""
 import pandas as pd
+
+from jasmine.classes_and_files_reader.RTModel_results_reader import list_of_events_from_sample_df
 from jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls import LightcurveEventGULLSRGES_NameBased
 from jasmine import ModelResults
 
@@ -58,13 +63,15 @@ def event_summary_q_s_wrapper(root_path_, list_of_events_, type_of_event_):
 
 
 if __name__ == '__main__':
-    list_of_events = ['event_0_1000_1445',
-                      'event_0_42_2848',
-                      'event_0_762_407']
-    type_of_event = 'top10_piE'
-    general_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
+    # list_of_events = ['event_0_1000_1445',
+    #                   'event_0_42_2848',
+    #                   'event_0_762_407']
+    # /discover/nobackup/sishitan/orbital_task/RTModel_runs/sample
+    type_of_event = 'sample'
+    runs_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
+    list_of_events = list_of_events_from_sample_df(runs_path)
     # general_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
     for event in list_of_events:
-        folder_path = f'{general_path}/{event}'
+        folder_path = f'{runs_path}/{event}'
         get_summary_of_q_s_chi2_per_event(folder_path, True)
-    event_summary_q_s_wrapper(general_path, list_of_events, type_of_event)
+    event_summary_q_s_wrapper(runs_path, list_of_events, type_of_event)

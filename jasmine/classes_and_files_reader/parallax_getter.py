@@ -1,3 +1,6 @@
+"""
+Called by RTModel_results_reader.py - check that
+"""
 from jasmine import ModelResults
 from jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls import LightcurveEventGULLSRGES_NameBased
 

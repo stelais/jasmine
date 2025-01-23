@@ -66,6 +66,20 @@ def main(general_path_, list_of_events_, parallax=True, mass_ratio_and_separatio
         pie_getter.event_summary_parallax_wrapper(general_path_, list_of_events_, type_of_event_)
 
 
+def list_of_events_from_sample_df(runs_path_):
+    general_path_ = runs_path_.split('/RTModel_runs')[0] + '/data/gulls_orbital_motion_extracted'
+    master_file_path = f'{general_path_}/OMPLDG_croin_cassan.sample.csv'
+    sample_df = pd.read_csv(master_file_path)
+    list_of_events_ = []
+    for _, row in sample_df.iterrows():
+        subrun = row['SubRun']
+        event_id = row['EventID']
+        field = row['Field']
+        event_name = f'event_{subrun}_{field}_{event_id}'
+        list_of_events_.append(event_name)
+    return list_of_events_
+
+
 if __name__ == '__main__':
     # # print(chi2_getter('/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/event_004/Models/BS0004-1.txt'))
     # list_of_bound_planet_events = [4, 8, 12, 25, 32, 40, 47, 50, 53, 62, 66, 69, 74, 78, 81, 92, 95, 99, 100, 103,
@@ -79,21 +93,26 @@ if __name__ == '__main__':
     # root_path = '/local/data/emussd1/greg_shared/rtmodel_effort/datachallenge/datachallenge_events/'
     # # root_path = '/Users/sishitan/Documents/Scripts/RTModel_project/RTModel/datachallenge_events/'
 
-    general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
-    list_of_events = ['event_0_762_407',
-                      'event_0_876_1031',
-                      'event_1_793_3191',
-                      'event_0_42_270',
-                      'event_0_922_1199',
-                      'event_0_672_2455',
-                      'event_0_992_224',
-                      'event_0_42_2848',
-                      'event_1_755_564',
-                      'event_0_798_371']
+    # general_path = '/discover/nobackup/sishitan/orbital_task/RTModel_runs/top10_piE'
+    # list_of_events = ['event_0_762_407',
+    #                   'event_0_876_1031',
+    #                   'event_1_793_3191',
+    #                   'event_0_42_270',
+    #                   'event_0_922_1199',
+    #                   'event_0_672_2455',
+    #                   'event_0_992_224',
+    #                   'event_0_42_2848',
+    #                   'event_1_755_564',
+    #                   'event_0_798_371']
 
     #
     # general_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
     # list_of_events = ['event_0_42_270',]
     # # 'event_0_1000_1445',
 
-    main(general_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event_='top10_piE')
+    type_of_event = 'sample'
+    # runs_path = f'/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/{type_of_event}'
+    runs_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
+    list_of_events = list_of_events_from_sample_df(runs_path)
+    # list_of_events = ['event_0_1000_1079', 'event_0_1000_1344']
+    main(runs_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event_=type_of_event)
