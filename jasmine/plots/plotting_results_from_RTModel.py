@@ -27,15 +27,15 @@ def plotting_mass_ratio(q_and_s_summary_df, model_type, x_range=None, y_range=No
     ])
     if x_range is None:
         p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+                   x_axis_type='log', y_axis_type='log',
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
     else:
         p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+                   x_axis_type='log', y_axis_type='log',
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()], x_range=x_range, y_range=y_range)
-    p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
-               tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
     largest_true_q = q_and_s_summary_df['true_q'].max()
-    largest_model_q = q_and_s_summary_df[f'{model_type}_q'].max()
-    p.line([0, largest_true_q + 1e-6], [0, largest_model_q + 1e-6], line_width=1, line_color='red')
+    smallest_true_q = q_and_s_summary_df['true_q'].min()
+    p.line([smallest_true_q, largest_true_q + 1e-6], [smallest_true_q, largest_true_q + 1e-6], line_width=1, line_color='red')
     p.scatter('x', 'y', size=5, fill_alpha=0.6, source=source)
     whisker_errorbar = Whisker(source=source, base="x", upper="upper", lower="lower",
                                line_width=1.0, line_alpha=1.0)  # level="overlay",
@@ -71,8 +71,8 @@ def plotting_separation(q_and_s_summary_df, model_type, x_range=None, y_range=No
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()], x_range=x_range, y_range=y_range)
         # add a circle renderer with vectorized colors and sizes
     largest_true_s = q_and_s_summary_df['true_s'].max()
-    largest_model_s = q_and_s_summary_df[f'{model_type}_s'].max()
-    p.line([0, largest_true_s + 1e-6], [0, largest_model_s + 1e-6], line_width=1, line_color='red')
+    smallest_true_s = q_and_s_summary_df['true_s'].min()
+    p.line([smallest_true_s, largest_true_s + 1e-6], [smallest_true_s, largest_true_s + 1e-6], line_width=1, line_color='red')
     p.scatter('x', 'y', size=5, fill_alpha=0.6, source=source)
     whisker_errorbar = Whisker(source=source, base="x", upper="upper", lower="lower",
                                line_width=1.0, line_alpha=1.0)  # level="overlay",
@@ -99,18 +99,16 @@ def plotting_pien(parallax_summary_df, model_type, x_range=None, y_range=None):
         ("LC#", "@desc")
     ])
     if x_range is None:
-        p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+        p = figure(width=350, height=350, title=title, x_axis_label='true pien', y_axis_label=f'{model_type} pien',
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
     else:
-        p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+        p = figure(width=350, height=350, title=title, x_axis_label='true pien', y_axis_label=f'{model_type} pien',
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()], x_range=x_range, y_range=y_range)
-    p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+    p = figure(width=350, height=350, title=title, x_axis_label='true pien', y_axis_label=f'{model_type} pien',
                tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
     largest_true_piE = parallax_summary_df['true_piEN'].max()
-    largest_model_piE = parallax_summary_df[f'{model_type}_piEN'].max()
     smallest_true_piE = parallax_summary_df['true_piEN'].min()
-    smallest_model_piE = parallax_summary_df[f'{model_type}_piEN'].min()
-    p.line([smallest_true_piE - 1e-3, largest_true_piE + 1e-3], [smallest_model_piE - 1e-3, largest_model_piE + 1e-3],
+    p.line([smallest_true_piE, largest_true_piE], [smallest_true_piE, largest_true_piE],
            line_width=1, line_color='red')
     p.scatter('x', 'y', size=5, fill_alpha=0.6, source=source)
     whisker_errorbar = Whisker(source=source, base="x", upper="upper", lower="lower",
@@ -138,18 +136,16 @@ def plotting_piee(parallax_summary_df, model_type, x_range=None, y_range=None):
         ("LC#", "@desc")
     ])
     if x_range is None:
-        p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+        p = figure(width=350, height=350, title=title, x_axis_label='true piee', y_axis_label=f'{model_type} piee',
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
     else:
-        p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+        p = figure(width=350, height=350, title=title, x_axis_label='true piee', y_axis_label=f'{model_type} piee',
                    tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()], x_range=x_range, y_range=y_range)
-    p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
+    p = figure(width=350, height=350, title=title, x_axis_label='true piee', y_axis_label=f'{model_type} piee',
                tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
     largest_true_piE = parallax_summary_df['true_piEN'].max()
-    largest_model_piE = parallax_summary_df[f'{model_type}_piEN'].max()
     smallest_true_piE = parallax_summary_df['true_piEN'].min()
-    smallest_model_piE = parallax_summary_df[f'{model_type}_piEN'].min()
-    p.line([smallest_true_piE - 1e-3, largest_true_piE + 1e-3], [smallest_model_piE - 1e-3, largest_model_piE + 1e-3],
+    p.line([smallest_true_piE, largest_true_piE], [smallest_true_piE, largest_true_piE],
            line_width=1, line_color='red')
     p.scatter('x', 'y', size=5, fill_alpha=0.6, source=source)
     whisker_errorbar = Whisker(source=source, base="x", upper="upper", lower="lower",
