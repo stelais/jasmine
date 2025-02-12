@@ -2,9 +2,10 @@ import VBMicrolensing
 import pandas as pd
 import numpy as np
 import math
-from scipy.optimize import minimize
+from scipy.optimize import minimize,least_squares
 import RTModel
 import shutil
+import matplotlib.pyplot as plt
 
 
 def minimize_linear_pars(y,err,x):
@@ -30,6 +31,14 @@ def get_chi2(magnitude_list,mag_data_list,error_list,ndatasets):
     chi2_sum = np.sum(chi2_list)
     return chi2_list,chi2_sum
 
+def get_residuals(magnitude_list,mag_data_list,error_list,ndatasets):
+    """calculate chi2 for model on each dataset provided"""
+    residue_list = []
+    for i in range(ndatasets):
+        res = (magnitude_list[i] - mag_data_list[i]) / error_list[i]
+        residue_list.append(res)
+    residues = np.concatenate(residue_list)
+    return residues
 
 def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance):
     """Calculate LC magnitudes in each passband provided for 2L1S"""
@@ -51,17 +60,19 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance):
         magnitude_list.append(sim_magnitudes)
     return magnitude_list,source_flux_list,blend_flux_list
 
-def calculate_magnifications_pspl(pars,data_list,ndatasets,VBMInstance):
+def calculate_magnifications_pspl(pars,data_list,data_mag,ndatasets,VBMInstance):
     """Calculate LC magnitudes in each passband provided for PSPL model"""
     magnitude_list = []
     source_flux_list = []
     blend_flux_list = []
+    pars_log = [np.log(pars[0]), np.log(pars[1]), pars[2]]
     for i in range(ndatasets):
         data = data_list[i]
-        magnifications, y1, y2 = VBMInstance.PSPLLightCurve(pars,data[:,-1])
+        magnifications, y1, y2 = VBMInstance.PSPLLightCurve(pars_log,data[:,-1])
         meas_flux = 10**(-0.4*data[:,0])
         meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
         source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
+        magnifications, y1, y2 = VBMInstance.PSPLLightCurve(pars_log,data_mag)
         sim_flux = np.array(magnifications)*source_flux+blend_flux
         source_flux_list.append(source_flux)
         blend_flux_list.append(blend_flux)
@@ -116,7 +127,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     return grid_results
 
 
-def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,):
+def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
     """ Find best fitting PSPL Model"""
     data_list = []
     for i in range(len(dataset_list)):
@@ -133,10 +144,43 @@ def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,):
     #magnitude_list = []
     #source_flux_list = []
     #blend_flux_list = []
-    res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance],method='nelder-mead')
+    if method =='lm':
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+    else:
+        res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance],method=method)
     return res
 
 def calc_pspl_chi2(pars,args):
+    """ Objective function to optimize for pspl_fit() """
+    magnitude_list = []
+    source_flux_list = []
+    blend_flux_list = []
+    data_list = args[0]
+    ndatasets = args[1]
+    VBMInstance = args[2]
+    pars_log = [np.log(pars[0]),np.log(pars[1]),pars[2]]
+    print(pars)
+    for i in range(ndatasets):
+        data = data_list[i]
+        magnifications,y1,y2 = VBMInstance.PSPLLightCurve(pars_log,data[:,-1])
+        meas_flux = 10**(-0.4*data[:,0])
+        meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
+        source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
+        sim_flux = np.array(magnifications)*source_flux+blend_flux
+        source_flux_list.append(source_flux)
+        blend_flux_list.append(blend_flux)
+        sim_magnitudes = -2.5*np.log10(sim_flux)
+        magnitude_list.append(sim_magnitudes)
+    magdata_list = []
+    magerr_list = []
+    for i in range(ndatasets):
+        magdata_list.append(data_list[i][:,0])
+        magerr_list.append(data_list[i][:,1])
+    chi2_list, chi2 = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
+    print(chi2)
+    return chi2
+
+def calc_pspl_residuals(pars,args):
     """ Objective function to optimize for pspl_fit() """
     magnitude_list = []
     source_flux_list = []
@@ -162,9 +206,10 @@ def calc_pspl_chi2(pars,args):
     for i in range(ndatasets):
         magdata_list.append(data_list[i][:,0])
         magerr_list.append(data_list[i][:,1])
-    chi2_list, chi2 = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
+    residuals = get_residuals(magnitude_list, magdata_list, magerr_list, ndatasets)
+    chi2 = np.sum(np.power(residuals,2))
     print(chi2)
-    return chi2
+    return residuals
 
 
 def filter_by_q(grid_result, pspl_thresh=0):
@@ -218,12 +263,12 @@ def filter_by_q(grid_result, pspl_thresh=0):
     init_cond[:, 5] = np.exp(init_cond[:, 5])
     return best_grid_models, init_cond
 
-def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors):
+def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     #First do the PSPL fit
-    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list)
+    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
     pspl_chi2 = pspl_results.fun
-    pspl_pars = pspl_results.x
+    pspl_pars = pspl_results.x*2
     #save pspl fit to a txt file
     grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
                                 grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
@@ -255,4 +300,27 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.launch_fits('LO')
     rtm.ModelSelector('LO')
     rtm.Finalizer()
+    return None
+
+def plot_pspl(pars,dataset,event_path):
+    data = np.loadtxt(f'{event_path}/Data/{dataset}')
+    VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.RelTol = 1e-03
+    VBMInstance.Tol = 1e-03
+    tmag = np.linspace(data[0,-1],data[-1,-1],80000)
+    magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_pspl(pars,[data],tmag,1,VBMInstance)
+    magnitude = magnitude_list[0]
+    fig, ax = plt.subplots(dpi=100, layout='tight')
+    ax.plot(tmag, magnitude, zorder=10, label='PSPL Fit', color='black')
+    #magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_pspl([0.6291636,50.20121621,pars[-1]], [data],tmag, 1, VBMInstance)
+    #magnitude = magnitude_list[0]
+    #ax.plot(tmag, magnitude, zorder=10, label='PSPL True', color='red')
+    ax.errorbar(data[:, -1], y=data[:, 0], yerr=data[:, 1], marker='.', markersize=0.75,
+                linestyle=' ', label='W146')
+    ax.set_xlim(pars[-1]-1*pars[1],pars[-1]+1*pars[1])
+    ax.yaxis.set_inverted(True)
+    ax.legend()
+    plt.savefig(f'{event_path}/pspl_plot.png')
+    plt.show()
+
     return None
