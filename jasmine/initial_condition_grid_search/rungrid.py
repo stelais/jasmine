@@ -1,8 +1,8 @@
-from gridfit import *
+#from gridfit import *
 #import sys
 #import tdqm
 import numpy as np
-from jasmine.initial_condition_grid_search import *
+from jasmine.initial_condition_grid_search.gridfit import *
 def main(event_path):
     a1_list = [0.33,0.4534,0.2517]
     dataset_list = ['RomanW146sat1.dat','RomanZ087sat2.dat','RomanK213sat3.dat']
@@ -18,7 +18,7 @@ def main(event_path):
     run_event(event_path=event_path, dataset_list=dataset_list, grid_s=s_grid, grid_q=q_grid, grid_alpha=alpha_grid, tstar=tstar,
               a1_list=a1_list, pspl_thresh=0, processors=5)
 if __name__ == "__main__":
-    event = '/Users/jmbrashe/VBBOrbital/GULLS/test_331'
+    event = '/Users/jmbrashe/VBBOrbital/GULLS/test2_331'
     main(event_path=event)
 
 

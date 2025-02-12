@@ -237,6 +237,11 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.recover_options() # Use same options as Stela on NCCS
     rtm.archive_run()
     shutil.rmtree(f'{event_path}/run-0001' , ) # have to remove old stuff or it affects the InitConds for everything.
+    #Write some outputs after clearing the directory
+    with open(f'{event_path}/pspl_pars.txt','w') as f:
+        f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
+    np.savetxt(fname=f'{event_path}/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
+    np.savetxt(f'{event_path}/grid_fit.txt', grid_fit_results)
     rtm.Reader()
     rtm.InitCond()
     num_init_cond = init_conds.shape[0]
@@ -250,8 +255,4 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.launch_fits('LO')
     rtm.ModelSelector('LO')
     rtm.Finalizer()
-    with open(f'{event_path}/pspl_pars.txt','w') as f:
-        f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
-    np.savetxt(fname=f'{event_path}/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
-    np.savetxt(f'{event_path}/grid_fit.txt', grid_fit_results)
     return None
