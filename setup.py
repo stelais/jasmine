@@ -26,5 +26,6 @@ setup(name='jasmine-astro',
                         "bokeh==3.4.1",
                         "VBBinaryLensing==3.7.0",
                         "VBMicrolensing==4.1.0",
-                        "moana-pypi==0.2.2"
+                        "moana-pypi==0.2.2",
+                        "RTModel==2.4.0"
                         ])
