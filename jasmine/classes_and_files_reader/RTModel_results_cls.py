@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
+import pandas as pd
 
 
 class ModelResults:
@@ -29,6 +30,7 @@ class ModelResults:
             self.model_parameters = BinaryLensSingleSourceWithOrbitalMotionLO(file_to_be_read)
         else:
             raise ValueError(f"Model type {self.model_type} not recognized.")
+        self.covariance_matrix = pd.read_csv(file_to_be_read, skiprows=2, header=None, delimiter='\s+')
 
 
 @dataclass
