@@ -1,9 +1,9 @@
 from jasmine import LightcurveEventDataChallenge
 import numpy as np
-import VBBinaryLensing
+import VBMicrolensing
 
 
-def datachallenge_bound_planet_magnification_using_vbb(lightcurve_, *,
+def datachallenge_bound_planet_magnification_using_vbm(lightcurve_, *,
                                                        time_interval=None,
                                                        parallax=False,
                                                        orbital_motion=False):
@@ -17,7 +17,7 @@ def datachallenge_bound_planet_magnification_using_vbb(lightcurve_, *,
     :return:
     """
 
-    vbb = VBBinaryLensing.VBBinaryLensing()
+    vbm = VBMicrolensing.VBMicrolensing()
 
     separation_s = lightcurve_.planet.planet_separation
     mass_ratio_q = lightcurve_.planet.planet_mass_ratio
@@ -36,7 +36,7 @@ def datachallenge_bound_planet_magnification_using_vbb(lightcurve_, *,
         print('Edit here to a collection of parameters with orbital motion')
     pr = [np.log(separation_s), np.log(mass_ratio_q), impact_parameter_u0,
           alpha, np.log(rho), np.log(einstein_time_tE), peak_time_t0]
-    results = vbb.BinaryLightCurve(pr, time_interval)
+    results = vbm.BinaryLightCurve(pr, time_interval)
 
     return results[0], time_interval
 
@@ -44,7 +44,7 @@ def datachallenge_bound_planet_magnification_using_vbb(lightcurve_, *,
 def easy_plot_lightcurve(lightcurve_):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
-    magnification, time_interval = datachallenge_bound_planet_magnification_using_vbb(lightcurve_)
+    magnification, time_interval = datachallenge_bound_planet_magnification_using_vbm(lightcurve_)
     ax.scatter(time_interval, magnification, s=0.8, alpha=0.3)
     plt.show(dpi=600)
 
@@ -54,6 +54,6 @@ if __name__ == '__main__':
     lightcurve = LightcurveEventDataChallenge(data_challenge_lc_number=267,
                                               data_folder='/Users/stela/Documents/Scripts/RTModel_project/datachallenge')
 
-    datachallenge_bound_planet_magnification_using_vbb(lightcurve)
+    datachallenge_bound_planet_magnification_using_vbm(lightcurve)
     easy_plot_lightcurve(lightcurve)
 

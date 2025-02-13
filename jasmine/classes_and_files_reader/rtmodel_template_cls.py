@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
-import VBBinaryLensing
+import VBMicrolensing
 from moana import lens as mlens
 
 
@@ -53,19 +53,19 @@ class RTModelTemplateForBinaryLightCurve:
         self.caustics = None
         self.type_of_caustics = None
 
-    def rtmodel_calculation_using_vbb(self, *, time_interval=None,
+    def rtmodel_calculation_using_vbm(self, *, time_interval=None,
                                       parallax=False,
                                       orbital_motion=False,
                                       n_points=10000):
         """
-        Calculate the light curve using the VBBinaryLensing package
+        Calculate the light curve using the VBMicrolensing package
         :param time_interval:
         :param parallax:
         :param orbital_motion:
         :param n_points:
         :return:
         """
-        vbb = VBBinaryLensing.VBBinaryLensing()
+        vbm = VBMicrolensing.VBMicrolensing()
 
         separation_s = self.separation_s
         mass_ratio_q = self.mass_ratio_q
@@ -84,24 +84,24 @@ class RTModelTemplateForBinaryLightCurve:
             print('Edit here to a collection of parameters with orbital motion')
         pr = [np.log(separation_s), np.log(mass_ratio_q), impact_parameter_u0,
               alpha, np.log(rho), np.log(einstein_time_tE), peak_time_t0]
-        self.results = vbb.BinaryLightCurve(pr, time_interval)
+        self.results = vbm.BinaryLightCurve(pr, time_interval)
         self.times = time_interval
         return self.results
 
-    def rtmodel_magnification_using_vbb(self, *,
+    def rtmodel_magnification_using_vbm(self, *,
                                         time_interval=None,
                                         parallax=False,
                                         orbital_motion=False,
                                         n_points=10000):
         """
-        Calculate the magnification using the VBBinaryLensing package
+        Calculate the magnification using the VBMicrolensing package
         :param time_interval:
         :param parallax:
         :param orbital_motion:
         :param n_points:
         :return:
         """
-        self.results = self.rtmodel_calculation_using_vbb(time_interval=time_interval,
+        self.results = self.rtmodel_calculation_using_vbm(time_interval=time_interval,
                                                           parallax=parallax,
                                                           orbital_motion=orbital_motion,
                                                           n_points=n_points)
@@ -109,13 +109,13 @@ class RTModelTemplateForBinaryLightCurve:
         self.magnification = self.results[0]
         return self.magnification, self.times
 
-    def rtmodel_source_trajectory_using_vbb(self, *,
+    def rtmodel_source_trajectory_using_vbm(self, *,
                                             time_interval=None,
                                             parallax=False,
                                             orbital_motion=False,
                                             n_points=10000):
         """
-        Calculate the source trajectory using the VBBinaryLensing package
+        Calculate the source trajectory using the VBMicrolensing package
         :param time_interval:
         :param parallax:
         :param orbital_motion:
@@ -123,7 +123,7 @@ class RTModelTemplateForBinaryLightCurve:
         :return:
         """
         if self.results is None:
-            self.results = self.rtmodel_calculation_using_vbb(time_interval=time_interval,
+            self.results = self.rtmodel_calculation_using_vbm(time_interval=time_interval,
                                                               parallax=parallax,
                                                               orbital_motion=orbital_motion,
                                                               n_points=n_points)
@@ -131,13 +131,13 @@ class RTModelTemplateForBinaryLightCurve:
         self.source_trajectory_y2 = self.results[2]
         return self.source_trajectory_y1, self.source_trajectory_y2
 
-    def rtmodel_caustics_using_vbb(self):
+    def rtmodel_caustics_using_vbm(self):
         """
-        Calculate the caustics using the VBBinaryLensing package
+        Calculate the caustics using the VBMicrolensing package
         :return:
         """
-        vbb = VBBinaryLensing.VBBinaryLensing()
-        caustics = vbb.Caustics(self.separation_s, self.mass_ratio_q)
+        vbm = VBMicrolensing.VBMicrolensing()
+        caustics = vbm.Caustics(self.separation_s, self.mass_ratio_q)
         self.caustics = caustics
         return caustics
 
