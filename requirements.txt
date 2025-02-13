@@ -9,3 +9,5 @@ setuptools~=69.5.1
 jplephem~=2.22
 bokeh~=3.4.1
 VBBinaryLensing==3.7.0
+VBMicrolensing==4.1
+RTModel==2.4
