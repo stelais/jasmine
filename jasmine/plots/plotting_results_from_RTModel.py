@@ -1,4 +1,4 @@
-from bokeh.models import HoverTool, ColumnDataSource, Whisker, BoxZoomTool, ResetTool, PanTool, SaveTool
+from bokeh.models import HoverTool, ColumnDataSource, Whisker, BoxZoomTool, ResetTool, PanTool, SaveTool, WheelZoomTool
 from bokeh.plotting import figure
 from bokeh.palettes import Category10
 
@@ -28,11 +28,11 @@ def plotting_mass_ratio(q_and_s_summary_df, model_type, x_range=None, y_range=No
     if x_range is None:
         p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
                    x_axis_type='log', y_axis_type='log',
-                   tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()])
+                   tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool(), WheelZoomTool()])
     else:
         p = figure(width=350, height=350, title=title, x_axis_label='true q', y_axis_label=f'{model_type} q',
                    x_axis_type='log', y_axis_type='log',
-                   tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool()], x_range=x_range, y_range=y_range)
+                   tools=[hover, BoxZoomTool(), ResetTool(), PanTool(), SaveTool(), WheelZoomTool()], x_range=x_range, y_range=y_range)
     largest_true_q = q_and_s_summary_df['true_q'].max()
     smallest_true_q = q_and_s_summary_df['true_q'].min()
     p.line([smallest_true_q, largest_true_q + 1e-6], [smallest_true_q, largest_true_q + 1e-6], line_width=1, line_color='red')
