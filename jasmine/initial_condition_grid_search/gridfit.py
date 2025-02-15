@@ -5,8 +5,10 @@ import math
 from scipy.optimize import minimize,least_squares
 import RTModel
 import shutil
+import os
 import matplotlib.pyplot as plt
-
+import logging
+import sys
 
 def minimize_linear_pars(y,err,x):
     """
@@ -80,7 +82,6 @@ def calculate_magnifications_pspl(pars,data_list,data_mag,ndatasets,VBMInstance)
         magnitude_list.append(sim_magnitudes)
     return magnitude_list,source_flux_list,blend_flux_list
 
-
 def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2):
     """ Calculate chi2 for one model in the grid
         fsblpars = [s,q,alpha,tstar]
@@ -91,7 +92,6 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     #blend_flux_list = []
     #source_flux_list = []
     ndatasets = len(data_list)
-
     pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]), math.log(psplpars[1]), psplpars[2]]
     magnitude_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance)
     magdata_list = []
@@ -103,7 +103,7 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
     return return_list
 
-def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2):
+def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,logger):
     """
         Fit grid of models to determine initial conditions
     """
@@ -117,17 +117,16 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     s= s.flatten()
     q = q.flatten()
     alpha = alpha.flatten()
-    print(s.shape[0])
+    #print(s.shape[0])
     grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
     for i in range(s.shape[0]):
         fsblpars = [s[i],q[i],alpha[i],tstar]
         output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
         grid_results[i,:] = output
-        if i%10000==0: print(i)
+        if i%5000==0: logger.info(i)
     return grid_results
 
-
-def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
+def pspl_fit(event_path,dataset_list,logger,p0=None,init_ind = 0,method='lm'):
     """ Find best fitting PSPL Model"""
     data_list = []
     for i in range(len(dataset_list)):
@@ -136,18 +135,21 @@ def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
     VBMInstance.RelTol = 1e-03
     VBMInstance.Tol=1e-03
     if p0 is None:
-        print('Setting default initial conditions')
+        logger.info('Setting default initial conditions')
         t0_init = data_list[init_ind][np.argmin(data_list[init_ind][:,0]),-1]
         p0 = [0.1,10,t0_init]
     else:
-        print('Using provided initial conditions')
+        logger.info('Using provided initial conditions')
     #magnitude_list = []
     #source_flux_list = []
     #blend_flux_list = []
     if method =='lm':
-        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        logger.info('Using Levenberg-Marquardt')
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance,logger]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
     else:
-        res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance],method=method)
+        logger.info('Using some scipy.minimize')
+        res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance,logger],method=method)
+    logger.info('Done Fitting PSPL!')
     return res
 
 def calc_pspl_chi2(pars,args):
@@ -158,8 +160,9 @@ def calc_pspl_chi2(pars,args):
     data_list = args[0]
     ndatasets = args[1]
     VBMInstance = args[2]
+    logger = args[3]
     pars_log = [np.log(pars[0]),np.log(pars[1]),pars[2]]
-    print(pars)
+    #logger.info(pars)
     for i in range(ndatasets):
         data = data_list[i]
         magnifications,y1,y2 = VBMInstance.PSPLLightCurve(pars_log,data[:,-1])
@@ -177,7 +180,7 @@ def calc_pspl_chi2(pars,args):
         magdata_list.append(data_list[i][:,0])
         magerr_list.append(data_list[i][:,1])
     chi2_list, chi2 = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
-    print(chi2)
+    logger.info(chi2)
     return chi2
 
 def calc_pspl_residuals(pars,args):
@@ -188,6 +191,7 @@ def calc_pspl_residuals(pars,args):
     data_list = args[0]
     ndatasets = args[1]
     VBMInstance = args[2]
+    logger = args[3]
     pars_log = [np.log(pars[0]),np.log(pars[1]),pars[2]]
     #print(pars)
     for i in range(ndatasets):
@@ -208,50 +212,52 @@ def calc_pspl_residuals(pars,args):
         magerr_list.append(data_list[i][:,1])
     residuals = get_residuals(magnitude_list, magdata_list, magerr_list, ndatasets)
     chi2 = np.sum(np.power(residuals,2))
-    print(chi2)
+    logger.info(chi2)
     return residuals
 
 
-def filter_by_q(grid_result, pspl_thresh=0):
+def filter_by_q(grid_result, logger,pspl_thresh=0):
     """
     Finds best initial conditions on grid for each value of q.
     Does a very simple check for s>1 s<1, but this often will not find an s/1/s degeneracy.
     """
+    logger.info('Picking best models for each q.')
     q_list = list(grid_result['log(q)'].unique())
     best_grid_models = []
     for q in q_list:
-        print(q)
+        #print(q)
         subgrid = grid_result[grid_result['log(q)'] == q]  # filter results for 1 q value.
         best_model = subgrid.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
                      :]  # get best grid model for this q
         if best_model['delta_pspl_chi2'] <= pspl_thresh:
             best_grid_models.append(best_model)  # add to list of models to be run
         # Simple check for any s<->1/s degeneracy. Just looks any good solution with s> or < 1
-        s = np.exp(best_model['log(s)'])
-        if s > 1:
-            subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) <= 1]  # filter out s>=1 to get s<1 df
-            best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-                                 :]  # check for s<1
-            if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-                best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-        elif s < 1:
-            subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) >= 1]  # filter out s<=1 to get s>1 df
-            best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-                                 :]  # check for s>1
-            if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-                best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-        elif s == float(1):
-            # check for both s>1 s<1
-            subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) <= 1]  # filter out s>=1 to get s<1 df
-            best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-                                 :]  # check for s<1
-            if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-                best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-            subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) >= 1]  # filter out s<=1 to get s>1 df
-            best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-                                 :]  # check for s>1
-            if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-                best_grid_models.append(best_model_s_degen)  # add to list of models to be run
+       #
+         # s = np.exp(best_model['log(s)'])
+        # if s > 1:
+        #     subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) <= 1]  # filter out s>=1 to get s<1 df
+        #     best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
+        #                          :]  # check for s<1
+        #     if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
+        #         best_grid_models.append(best_model_s_degen)  # add to list of models to be run
+        # elif s < 1:
+        #     subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) >= 1]  # filter out s<=1 to get s>1 df
+        #     best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
+        #                          :]  # check for s>1
+        #     if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
+        #         best_grid_models.append(best_model_s_degen)  # add to list of models to be run
+        # elif s == float(1):
+        #     check for both s>1 s<1
+            # subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) <= 1]  # filter out s>=1 to get s<1 df
+            # best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
+            #                      :]  # check for s<1
+            # if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
+            #     best_grid_models.append(best_model_s_degen)  # add to list of models to be run
+            # subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) >= 1]  # filter out s<=1 to get s>1 df
+            # best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
+            #                      :]  # check for s>1
+            # if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
+            #     best_grid_models.append(best_model_s_degen)  # add to list of models to be run
 
     best_grid_models = pd.concat(best_grid_models, axis=1,
                                  ignore_index=True).T  # create a DataFrame of the best grid models
@@ -261,27 +267,43 @@ def filter_by_q(grid_result, pspl_thresh=0):
     init_cond[:, 1] = np.exp(init_cond[:, 1])
     init_cond[:, 4] = np.exp(init_cond[:, 4])
     init_cond[:, 5] = np.exp(init_cond[:, 5])
+    logger.info('Done!')
     return best_grid_models, init_cond
 
 def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
-    #First do the PSPL fit
-    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
-    pspl_chi2 = pspl_results.fun
-    pspl_pars = pspl_results.x*2
+    #Remove old log file if it exists. Mostly for quick troubleshoots.
+    try:
+        os.remove(path=f'{event_path}/ICGS.log')
+    except FileNotFoundError: print('No log file exists. Continuing.')
+    #Create logging object
+    logger = logging.getLogger()
+    logging.basicConfig(filename=f'{event_path}/ICGS.log',level=logging.INFO)
+    #Send errors and stdout to logger.
+    sys.stderr.write = logger.error
+    sys.stdout.write = logger.info
+    print('Printing to logger!')
+    # First do the PSPL fit
+    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method,logger=logger)
+    if method == 'lm':
+        pspl_chi2 = pspl_results.cost*2
+    else: pspl_chi2 = pspl_results.chi2
+    pspl_pars = pspl_results.x
     #save pspl fit to a txt file
     grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
-                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
+                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2,logger=logger)
     names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
     grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
-    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
+    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,logger=logger,pspl_thresh=pspl_thresh)
     #Now run these in RTModel
+    # Have RTModel prints go to log not stdout
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
     rtm.recover_options() # Use same options as Stela on NCCS
     rtm.archive_run()
-    shutil.rmtree(f'{event_path}/run-0001' , ) # have to remove old stuff or it affects the InitConds for everything.
+    shutil.copyfile(src = f'{event_path}/run-0001/ICGS.log',dst=f'{event_path}/ICGS.log')
+    shutil.rmtree(f'{event_path}/run-0001' ,) # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
     with open(f'{event_path}/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
