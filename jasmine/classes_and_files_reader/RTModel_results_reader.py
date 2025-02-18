@@ -1,3 +1,7 @@
+"""
+Run this code if you want a quick summary of chi2, q, s, and piE values for the best models of each event.
+"""
+
 import glob
 import pandas as pd
 
@@ -19,7 +23,7 @@ def chi2_getter(filepath_):
 
 def models_per_chi2_rank(folder_path_):
     """
-    This function rank the models per chi2 value
+    This function rank the models per chi2 value and create a chi2_top1_of_each_binary_lens_model.csv file
     """
     models = glob.glob(folder_path_ + '/Models/*txt')
     models_names = [model.replace(folder_path_, '').replace('/Models/', '').replace('.txt', '') for model in models]
@@ -52,6 +56,15 @@ def models_per_chi2_rank(folder_path_):
 
 
 def main(general_path_, list_of_events_, parallax=True, mass_ratio_and_separation=True, type_of_event_='top10_piE'):
+    """
+    This function is the main function that calls the other functions to get the summary of chi2, q, s, and piE values
+    :param general_path_:
+    :param list_of_events_:
+    :param parallax:
+    :param mass_ratio_and_separation:
+    :param type_of_event_:
+    :return:
+    """
     for event in list_of_events_:
         folder_path_ = f'{general_path_}/{event}'
         are_there_binary_solutions = models_per_chi2_rank(folder_path_)
@@ -67,6 +80,11 @@ def main(general_path_, list_of_events_, parallax=True, mass_ratio_and_separatio
 
 
 def list_of_events_from_sample_df(runs_path_):
+    """
+    This function reads the sample file and returns a list of events
+    :param runs_path_:
+    :return:
+    """
     general_path_ = runs_path_.split('/RTModel_runs')[0] + '/data/gulls_orbital_motion_extracted'
     master_file_path = f'{general_path_}/OMPLDG_croin_cassan.sample.csv'
     sample_df = pd.read_csv(master_file_path)
@@ -110,9 +128,15 @@ if __name__ == '__main__':
     # list_of_events = ['event_0_42_270',]
     # # 'event_0_1000_1445',
 
-    type_of_event = 'sample'
-    # runs_path = f'/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/{type_of_event}'
-    runs_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
-    list_of_events = list_of_events_from_sample_df(runs_path)
-    # list_of_events = ['event_0_1000_1079', 'event_0_1000_1344']
+    # type_of_event = 'sample'
+    type_of_event = '6_events_for_testing'
+    runs_path = f'/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/{type_of_event}'
+    # runs_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
+    # list_of_events = list_of_events_from_sample_df(runs_path)
+    list_of_events = ['event_0_128_2350',
+                      'event_0_167_1273',
+                      'event_0_672_793',
+                      'event_0_715_873',
+                      'event_0_874_19',
+                      'event_0_952_2841']
     main(runs_path, list_of_events, parallax=True, mass_ratio_and_separation=True, type_of_event_=type_of_event)
