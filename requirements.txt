@@ -3,6 +3,7 @@ jupyter
 notebook
 ipykernel
 matplotlib
+scipy
 astropy~=6.1.0
 numpy~=1.26.4
 setuptools~=69.5.1
