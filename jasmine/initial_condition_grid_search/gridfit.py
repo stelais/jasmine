@@ -119,11 +119,13 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     alpha = alpha.flatten()
     #print(s.shape[0])
     grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
+    logger.info(f'Checking {s.shape[0]} Models on grid!')
     for i in range(s.shape[0]):
         fsblpars = [s[i],q[i],alpha[i],tstar]
         output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
         grid_results[i,:] = output
-        if i%5000==0: logger.info(i)
+        if i%5000==0: logger.info(f'{i} Models checked')
+    logger.info('Done checking models!')
     return grid_results
 
 def pspl_fit(event_path,dataset_list,logger,p0=None,init_ind = 0,method='lm'):
@@ -212,7 +214,7 @@ def calc_pspl_residuals(pars,args):
         magerr_list.append(data_list[i][:,1])
     residuals = get_residuals(magnitude_list, magdata_list, magerr_list, ndatasets)
     chi2 = np.sum(np.power(residuals,2))
-    logger.info(chi2)
+    logger.info(f'chi2: {chi2}')
     return residuals
 
 
@@ -300,6 +302,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
+    rtm.set_satellite_dir('/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx/satellitedir')
     rtm.recover_options() # Use same options as Stela on NCCS
     rtm.archive_run()
     shutil.copyfile(src = f'{event_path}/run-0001/ICGS.log',dst=f'{event_path}/ICGS.log')
@@ -309,19 +312,27 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/grid_fit.txt', grid_fit_results)
+    rtm.config_InitCond(usesatellite=1)
     rtm.Reader()
     rtm.InitCond()
+    #Do FSPL fit for comparison
+    logger.info('Launching PS Fits')
+    rtm.launch_fits('PS')
+    rtm.ModelSelector('PS')
+    logger.info('Launching LS Fits')
     num_init_cond = init_conds.shape[0]
     for n in range(num_init_cond):
         init_cond = list(init_conds[n,:])
         #launch each fit from the init conds
         rtm.LevMar(f'LSfit{n:03}',parameters = init_cond)
     rtm.ModelSelector('LS')
+    logger.info('Launching LX and LO fits')
     rtm.launch_fits('LX')
     rtm.ModelSelector('LX')
     rtm.launch_fits('LO')
     rtm.ModelSelector('LO')
     rtm.Finalizer()
+    logger.info('Done')
     return None
 
 def plot_pspl(pars,dataset,event_path):
@@ -344,5 +355,54 @@ def plot_pspl(pars,dataset,event_path):
     ax.legend()
     plt.savefig(f'{event_path}/pspl_plot.png')
     plt.show()
+    return None
 
+
+
+
+def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBMInstance):
+    """Calculate LC magnitudes in each passband provided for 2L1S"""
+    magnitude_list = []
+    source_flux_list = []
+    blend_flux_list = []
+    for i in range(ndatasets):
+        VBMInstance.a1 = a1_list[i]
+        data = data_list[i]
+        magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars,data[:,-1])
+        meas_flux = 10**(-0.4*data[:,0])
+        meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
+        #Fix so minimize_linear_parameters uses flux_err not mag_err
+        source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
+        magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars, data_mag)
+        sim_flux = np.array(magnifications)*source_flux+blend_flux
+        source_flux_list.append(source_flux)
+        blend_flux_list.append(blend_flux)
+        sim_magnitudes = -2.5*np.log10(sim_flux)
+        magnitude_list.append(sim_magnitudes)
+    return magnitude_list,source_flux_list,blend_flux_list
+
+def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
+    data = np.loadtxt(f'{event_path}/Data/{dataset}')
+    VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.RelTol = 1e-03
+    VBMInstance.Tol = 1e-04
+    tmag = np.linspace(data[0,-1],data[-1,-1],80000)
+    a1 = 0.33
+    magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_plots(pars,[a1],[data],tmag,1,VBMInstance)
+    magnitude = magnitude_list[0]
+    fig, ax = plt.subplots(dpi=100, layout='tight')
+    ax.plot(tmag, magnitude, zorder=10, label='2L1S Fit', color='black')
+    #magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_pspl([0.6291636,50.20121621,pars[-1]], [data],tmag, 1, VBMInstance)
+    #magnitude = magnitude_list[0]
+    #ax.plot(tmag, magnitude, zorder=10, label='PSPL True', color='red')
+    ax.errorbar(data[:, -1], y=data[:, 0], yerr=data[:, 1], marker='.', markersize=0.75,
+                linestyle=' ', label='W146')
+    ax.set_xlim(xrange[0],xrange[1])
+    ax.set_ylim(yrange[0], yrange[1])
+    ax.yaxis.set_inverted(True)
+    ax.set_ylabel('W146')
+    ax.set_xlabel("HJD'")
+    ax.legend()
+    plt.savefig(f'{event_path}/{evname}')
+    #plt.show()
     return None
