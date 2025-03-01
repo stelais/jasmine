@@ -272,7 +272,7 @@ def filter_by_q(grid_result, logger,pspl_thresh=0):
     logger.info('Done!')
     return best_grid_models, init_cond
 
-def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm'):
+def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,satellitedir,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     #Remove old log file if it exists. Mostly for quick troubleshoots.
     try:
@@ -302,7 +302,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
-    rtm.set_satellite_dir('/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx/satellitedir')
+    rtm.set_satellite_dir(satellitedir=satellitedir)
     rtm.recover_options() # Use same options as Stela on NCCS
     rtm.archive_run()
     shutil.copyfile(src = f'{event_path}/run-0001/ICGS.log',dst=f'{event_path}/ICGS.log')
@@ -360,7 +360,7 @@ def plot_pspl(pars,dataset,event_path):
 
 
 
-def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBMInstance):
+def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBMInstance,parallax=False):
     """Calculate LC magnitudes in each passband provided for 2L1S"""
     magnitude_list = []
     source_flux_list = []
@@ -368,7 +368,10 @@ def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBM
     for i in range(ndatasets):
         VBMInstance.a1 = a1_list[i]
         data = data_list[i]
-        magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars,data[:,-1])
+        if parallax == False:
+            magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars,data[:,-1])
+        else:
+            magnifications, y1, y2, sorb = VBMInstance.BinaryLightCurveOrbital(pars, data[:, -1])
         meas_flux = 10**(-0.4*data[:,0])
         meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
         #Fix so minimize_linear_parameters uses flux_err not mag_err
@@ -384,9 +387,9 @@ def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBM
 def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
     VBMInstance = VBMicrolensing.VBMicrolensing()
-    VBMInstance.RelTol = 1e-03
-    VBMInstance.Tol = 1e-04
-    tmag = np.linspace(data[0,-1],data[-1,-1],80000)
+    VBMInstance.RelTol = 1e-04
+    VBMInstance.Tol = 1e-05
+    tmag = np.linspace(pars[-1]-5*pars[5],pars[-1]+5*pars[5],80000)
     a1 = 0.33
     magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_plots(pars,[a1],[data],tmag,1,VBMInstance)
     magnitude = magnitude_list[0]
@@ -397,6 +400,18 @@ def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
     #ax.plot(tmag, magnitude, zorder=10, label='PSPL True', color='red')
     ax.errorbar(data[:, -1], y=data[:, 0], yerr=data[:, 1], marker='.', markersize=0.75,
                 linestyle=' ', label='W146')
+    if yrange == None:
+        ind_0 = np.where(tmag >= xrange[0])
+        ind_1 = np.where(tmag <= xrange[1])
+
+        ind_data_0 = np.where(data[:,-1] >= xrange[0])
+        ind_data_1 = np.where(data[:, -1] <= xrange[1])
+        ind_plot = np.intersect1d(ind_0,ind_1)
+        ind_data = np.intersect1d(ind_data_0,ind_data_1)
+
+        ymin = np.min([np.min(magnitude[ind_plot]) - 0.1,np.min(data[ind_data,0]) - 0.1])
+        ymax = np.max([np.max(magnitude[ind_plot]) + 0.1,np.max(data[ind_data,0]) + 0.1])
+        yrange=[ymin,ymax]
     ax.set_xlim(xrange[0],xrange[1])
     ax.set_ylim(yrange[0], yrange[1])
     ax.yaxis.set_inverted(True)
@@ -404,5 +419,53 @@ def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
     ax.set_xlabel("HJD'")
     ax.legend()
     plt.savefig(f'{event_path}/{evname}')
-    #plt.show()
+    plt.show()
+    return None
+
+def plot_2L1S_parallax(pars,dataset,event_path,xrange,yrange,evname,satellitedir):
+    data = np.loadtxt(f'{event_path}/Data/{dataset}')
+    VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.RelTol = 1e-04
+    VBMInstance.Tol = 1e-05
+    coordinatefile = f'{event_path}/Data/event.coordinates'
+    VBMInstance.SetObjectCoordinates(coordinatefile, satellitedir)
+    VBMInstance.satellite=1
+    tmin = pars[6]-5*pars[5]
+    tmax = pars[6]+5*pars[5]
+    if tmin < data[0,-1]:
+        tmin = data[0,-1]
+    if tmax > data[-1,-1]:
+        tmax = data[-1,-1]
+    tmag = np.linspace(tmin,tmax,80000)
+    a1 = 0.33
+    magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_plots(pars,[a1],[data],tmag,1,VBMInstance,parallax=True)
+    magnitude = magnitude_list[0]
+    fig, ax = plt.subplots(dpi=100, layout='tight')
+    ax.plot(tmag, magnitude, zorder=10, label='2L1S Fit', color='black')
+    #magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_pspl([0.6291636,50.20121621,pars[-1]], [data],tmag, 1, VBMInstance)
+    #magnitude = magnitude_list[0]
+    #ax.plot(tmag, magnitude, zorder=10, label='PSPL True', color='red')
+    ax.errorbar(data[:, -1], y=data[:, 0], yerr=data[:, 1], marker='.', markersize=0.75,
+                linestyle=' ', label='W146')
+    # Set some good ylim based on the xlim if yrange==None.
+    if yrange == None:
+        ind_0 = np.where(tmag >= xrange[0])
+        ind_1 = np.where(tmag <= xrange[1])
+
+        ind_data_0 = np.where(data[:,-1] >= xrange[0])
+        ind_data_1 = np.where(data[:, -1] <= xrange[1])
+        ind_plot = np.intersect1d(ind_0,ind_1)
+        ind_data = np.intersect1d(ind_data_0,ind_data_1)
+
+        ymin = np.min([np.min(magnitude[ind_plot]) - 0.1,np.min(data[ind_data,0]) - 0.1])
+        ymax = np.max([np.max(magnitude[ind_plot]) + 0.1,np.max(data[ind_data,0]) + 0.1])
+        yrange=[ymin,ymax]
+    ax.set_xlim(xrange[0],xrange[1])
+    ax.set_ylim(yrange[0], yrange[1])
+    ax.yaxis.set_inverted(True)
+    ax.set_ylabel('W146')
+    ax.set_xlabel("HJD'")
+    ax.legend()
+    plt.savefig(f'{event_path}/{evname}')
+    plt.show()
     return None
