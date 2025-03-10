@@ -276,11 +276,11 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     #Remove old log file if it exists. Mostly for quick troubleshoots.
     try:
-        os.remove(path=f'{event_path}/ICGS.log')
+        os.remove(path=f'{event_path}/Data/ICGS.log')
     except FileNotFoundError: print('No log file exists. Continuing.')
     #Create logging object
     logger = logging.getLogger()
-    logging.basicConfig(filename=f'{event_path}/ICGS.log',level=logging.INFO)
+    logging.basicConfig(filename=f'{event_path}/Data/ICGS.log',level=logging.INFO)
     #Send errors and stdout to logger.
     sys.stderr.write = logger.error
     sys.stdout.write = logger.info
@@ -305,8 +305,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.set_satellite_dir(satellitedir=satellitedir)
     rtm.recover_options() # Use same options as Stela on NCCS
     rtm.archive_run()
-    shutil.copyfile(src = f'{event_path}/run-0001/ICGS.log',dst=f'{event_path}/ICGS.log')
-    shutil.rmtree(f'{event_path}/run-0001' ,) # have to remove old stuff or it affects the InitConds for everything.
+    shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
     with open(f'{event_path}/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
