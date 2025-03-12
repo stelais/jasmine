@@ -4,8 +4,8 @@ Note the fudge factor was set to 1.0, but should be adjusted accordingly
 """
 import os
 import pandas as pd
-from merida.src.moa9yr_lightcurve_cls import MOA9yearLightcurve
-from merida.src.metadata_cls import MOA_Lightcurve_Metadata
+from merida.moa9yr_lightcurve_cls import MOA9yearLightcurve
+from merida.metadata_cls import MOA_Lightcurve_Metadata
 from astropy.coordinates import SkyCoord
 from astropy import units
 
@@ -35,7 +35,7 @@ def creating_all_directories(*,
         creating_files(lightcurve_name_=lc_filename,
                        master_file_path_=light_curve_master_file,
                        data_input_folder_path_=data_input_folder_path_)
-        print('DID ONE')
+        print(f'{lc_filename} DONE')
 
     return None
 
@@ -90,13 +90,13 @@ def creating_files(*, lightcurve_name_,
             moa_file = open(f'{data_to_be_created_folder_}/MOA.dat', 'w')
             moa_file.write('# Mag err HJD-2450000\n')
             field = lightcurve_name_.split('-')[0]
-            the_lightcurve = MOA9yearLightcurve(lightcurve_name_, f"{data_input_folder_path_}/{field}")
+            the_lightcurve = MOA9yearLightcurve(lightcurve_name_, f"{data_input_folder_path_}/{field}/")
             the_lightcurve.get_days_magnitudes_errors(fudge_factor=1.0)
             if corrected:
-                wanted_columns = the_lightcurve.lightcurve_dataframe['cor_mag', 'cor_mag_err', 'HJD']
+                wanted_columns = the_lightcurve.lightcurve_dataframe[['cor_magnitudes', 'cor_magnitudes_err', 'HJD']]
             else:
-                wanted_columns = the_lightcurve.lightcurve_dataframe['mag', 'mag_err', 'HJD']
-            wanted_columns.to_csv(moa_file, index=False, mode='a')
+                wanted_columns = the_lightcurve.lightcurve_dataframe[['magnitudes', 'magnitudes_err', 'HJD']]
+            wanted_columns.to_csv(moa_file, index=False, mode='a', header=False, sep=' ')
             print(f'File MOA.dat created in {data_to_be_created_folder_}.')
 
         # Write LimbDarkening.txt file
@@ -104,7 +104,7 @@ def creating_files(*, lightcurve_name_,
         limb_file.write('0.5633')
 
         # Create the file with the event information
-        event_metadata = MOA_Lightcurve_Metadata(lightcurve_name_, master_file_path_)
+        event_metadata = MOA_Lightcurve_Metadata(lightcurve_name_, path_to_metadata=master_file_path_)
         event_ra_deg = event_metadata.ra_j2000
         event_dec_deg = event_metadata.dec_j2000
         event_coordinates = convert_degree_to_hms_dms(event_ra_deg, event_dec_deg)
@@ -112,7 +112,7 @@ def creating_files(*, lightcurve_name_,
             raise FileExistsError(f'File event.coordinates already exists in directory {data_to_be_created_folder_}')
         else:
             with open(f'{data_to_be_created_folder_}/event.coordinates', 'w') as f:
-                f.write(f'{event_coordinates}')
+                f.write(str(event_coordinates)[1:-1].replace(',', '').replace("'", ''))
             print(f'File event.coordinates created in {data_to_be_created_folder_}.')
 
 
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     general_path = '/Users/stela/Documents/Scripts/ai_microlensing'
     folder_to_be_created = f'{general_path}/merida/RTModel_runs'
     master_input_folder = f'{general_path}/merida/data'
-    data_input_folder = f'{general_path}/merida/data/qusi_microlensing/data/microlensing_2M'
+    data_input_folder = f'{general_path}/qusi_microlensing/data/microlensing_2M'
     creating_all_directories(folder_to_be_created_path_=folder_to_be_created,
                              master_input_folder_path_=master_input_folder,
                              data_input_folder_path_=data_input_folder)
