@@ -12,12 +12,12 @@ from astropy import units
 from jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
 
 
-def creating_all_directories(*,
-                             folder_to_be_created_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
-                                                        'merida/RTModel_runs',
-                             master_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/merida/data',
-                             data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/qusi_microlensing/data/'
-                                                     'microlensing_2M'):
+def creating_all_directories_with_files(*,
+                                        folder_to_be_created_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
+                                                                   'merida/RTModel_runs',
+                                        master_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/merida/data',
+                                        data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/qusi_microlensing/data/'
+                                                                'microlensing_2M'):
     if os.path.isdir(folder_to_be_created_path_):
         print(f' Found directory {folder_to_be_created_path_}! Continuing.')
     else:
@@ -40,9 +40,27 @@ def creating_all_directories(*,
     return None
 
 
+def creating_one_directory_with_files(*,
+                                      lc_filename_='gb9-R-8-5-27219',
+                                      folder_to_be_created_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
+                                                                 'merida/RTModel_runs',
+                                      master_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
+                                                                'merida/data',
+                                      data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
+                                                              'qusi_microlensing/data/microlensing_2M'):
+    creating_directories(lightcurve_name_=lc_filename_,
+                         folder_where_data_will_be_created=folder_to_be_created_path_)
+    creating_files(lightcurve_name_=lc_filename_,
+                   master_file_path_=light_curve_master_file,
+                   data_input_folder_path_=data_input_folder_path_)
+    print(f'{lc_filename_} DONE')
+
+    return None
+
+
 def creating_directories(*, lightcurve_name_,
                          folder_where_data_will_be_created='/Users/stela/Documents/Scripts/ai_microlensing/'
-                                              'merida/RTModel_runs'):
+                                                           'merida/RTModel_runs'):
     """
     Create directories for the moa9yr event following RTModel structure
     """
@@ -65,12 +83,13 @@ def creating_directories(*, lightcurve_name_,
             os.mkdir(data_folder)
             print(f'Folder {data_folder} created!')
 
+
 def creating_files(*, lightcurve_name_,
                    general_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
-                                              'merida/RTModel_runs',
+                                        'merida/RTModel_runs',
                    master_file_path_='/Users/stela/Documents/Scripts/ai_microlensing/merida/data/selected_metadata.csv',
                    data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/qusi_microlensing/data/'
-                                                     'microlensing_2M'):
+                                           'microlensing_2M'):
     """
     Create files for the moa9yr event following RTModel structure
     """
@@ -90,7 +109,8 @@ def creating_files(*, lightcurve_name_,
             moa_file = open(f'{data_to_be_created_folder_}/MOA.dat', 'w')
             moa_file.write('# Mag err HJD-2450000\n')
             field = lightcurve_name_.split('-')[0]
-            the_lightcurve = MOA9yearLightcurve(lightcurve_name_, f"{data_input_folder_path_}/{field}/")
+            the_lightcurve = MOA9yearLightcurve(lightcurve_name_,
+                                                f"{data_input_folder_path_}/{field}/")
             the_lightcurve.get_days_magnitudes_errors(fudge_factor=1.0)
             if corrected:
                 wanted_columns = the_lightcurve.lightcurve_dataframe[['cor_magnitudes', 'cor_magnitudes_err', 'HJD']]
@@ -121,6 +141,12 @@ if __name__ == '__main__':
     folder_to_be_created = f'{general_path}/merida/RTModel_runs'
     master_input_folder = f'{general_path}/merida/data'
     data_input_folder = f'{general_path}/qusi_microlensing/data/microlensing_2M'
-    creating_all_directories(folder_to_be_created_path_=folder_to_be_created,
-                             master_input_folder_path_=master_input_folder,
-                             data_input_folder_path_=data_input_folder)
+    # # CREATE ALL
+    # creating_all_directories(folder_to_be_created_path_=folder_to_be_created,
+    #                          master_input_folder_path_=master_input_folder,
+    #                          data_input_folder_path_=data_input_folder)
+    # CREATE ONE
+    creating_one_directory_with_files(lc_filename_='gb9-R-8-5-27219',
+                                      folder_to_be_created_path_=folder_to_be_created,
+                                      master_input_folder_path_=master_input_folder,
+                                      data_input_folder_path_=data_input_folder)
