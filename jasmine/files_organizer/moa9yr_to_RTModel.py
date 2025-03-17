@@ -6,8 +6,6 @@ import os
 import pandas as pd
 from merida.moa9yr_lightcurve_cls import MOA9yearLightcurve
 from merida.metadata_cls import MOA_Lightcurve_Metadata
-from astropy.coordinates import SkyCoord
-from astropy import units
 
 from jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
 
@@ -17,7 +15,18 @@ def creating_all_directories_with_files(*,
                                                                    'merida/RTModel_runs',
                                         master_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/merida/data',
                                         data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/qusi_microlensing/data/'
-                                                                'microlensing_2M'):
+                                                                'microlensing_2M',
+                                        limb_darkening_=0.5633,
+                                        offset_alternative_=False):
+    """
+    Create a list of directories and files for the moa9yr event following RTModel structure
+    :param folder_to_be_created_path_:
+    :param master_input_folder_path_:
+    :param data_input_folder_path_:
+    :param limb_darkening_:
+    :param offset_alternative_:
+    :return:
+    """
     if os.path.isdir(folder_to_be_created_path_):
         print(f' Found directory {folder_to_be_created_path_}! Continuing.')
     else:
@@ -34,7 +43,9 @@ def creating_all_directories_with_files(*,
                              folder_where_data_will_be_created=folder_to_be_created_path_)
         creating_files(lightcurve_name_=lc_filename,
                        master_file_path_=light_curve_master_file,
-                       data_input_folder_path_=data_input_folder_path_)
+                       data_input_folder_path_=data_input_folder_path_,
+                       limb_darkening_=limb_darkening_,
+                       offset_alternative_=offset_alternative_)
         print(f'{lc_filename} DONE')
 
     return None
@@ -47,12 +58,27 @@ def creating_one_directory_with_files(*,
                                       master_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
                                                                 'merida/data',
                                       data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
-                                                              'qusi_microlensing/data/microlensing_2M'):
+                                                              'qusi_microlensing/data/microlensing_2M',
+                                      limb_darkening_=0.5633,
+                                      offset_alternative_=False):
+    """
+    Create ONE directory and files for the moa9yr event following RTModel structure
+    :param lc_filename_:
+    :param folder_to_be_created_path_:
+    :param master_input_folder_path_:
+    :param data_input_folder_path_:
+    :param limb_darkening_:
+    :param offset_alternative_:
+    :return:
+    """
+    light_curve_master_file = f'{master_input_folder_path_}/selected_metadata.csv'
     creating_directories(lightcurve_name_=lc_filename_,
                          folder_where_data_will_be_created=folder_to_be_created_path_)
     creating_files(lightcurve_name_=lc_filename_,
                    master_file_path_=light_curve_master_file,
-                   data_input_folder_path_=data_input_folder_path_)
+                   data_input_folder_path_=data_input_folder_path_,
+                   limb_darkening_=limb_darkening_,
+                   offset_alternative_=offset_alternative_)
     print(f'{lc_filename_} DONE')
 
     return None
@@ -89,7 +115,9 @@ def creating_files(*, lightcurve_name_,
                                         'merida/RTModel_runs',
                    master_file_path_='/Users/stela/Documents/Scripts/ai_microlensing/merida/data/selected_metadata.csv',
                    data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/qusi_microlensing/data/'
-                                           'microlensing_2M'):
+                                           'microlensing_2M',
+                   limb_darkening_=0.5633,
+                   offset_alternative_=False):
     """
     Create files for the moa9yr event following RTModel structure
     """
@@ -111,9 +139,10 @@ def creating_files(*, lightcurve_name_,
             field = lightcurve_name_.split('-')[0]
             the_lightcurve = MOA9yearLightcurve(lightcurve_name_,
                                                 f"{data_input_folder_path_}/{field}/")
-            the_lightcurve.get_days_magnitudes_errors(fudge_factor=1.0)
+            the_lightcurve.get_days_magnitudes_errors(fudge_factor=1.0, offset_alternative=offset_alternative_)
             if corrected:
-                wanted_columns = the_lightcurve.lightcurve_dataframe[['cor_magnitudes', 'cor_magnitudes_err', 'HJD']]
+                wanted_columns = the_lightcurve.lightcurve_dataframe[['cor_magnitudes', 'cor_magnitudes_err', 'HJD']].copy()
+                wanted_columns.dropna(inplace=True)
             else:
                 wanted_columns = the_lightcurve.lightcurve_dataframe[['magnitudes', 'magnitudes_err', 'HJD']]
             wanted_columns.to_csv(moa_file, index=False, mode='a', header=False, sep=' ')
@@ -121,7 +150,7 @@ def creating_files(*, lightcurve_name_,
 
         # Write LimbDarkening.txt file
         limb_file = open(f'{data_to_be_created_folder_}/LimbDarkening.txt', 'w')
-        limb_file.write('0.5633')
+        limb_file.write(f'{limb_darkening_}')
 
         # Create the file with the event information
         event_metadata = MOA_Lightcurve_Metadata(lightcurve_name_, path_to_metadata=master_file_path_)
@@ -149,4 +178,6 @@ if __name__ == '__main__':
     creating_one_directory_with_files(lc_filename_='gb9-R-8-5-27219',
                                       folder_to_be_created_path_=folder_to_be_created,
                                       master_input_folder_path_=master_input_folder,
-                                      data_input_folder_path_=data_input_folder)
+                                      data_input_folder_path_=data_input_folder,
+                                      limb_darkening_=0.5633,
+                                      offset_alternative_=True)
