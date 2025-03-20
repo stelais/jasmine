@@ -54,3 +54,15 @@ def relative_error_percentage_calculator(true_value, approximated_value):
 def relative_error_calculator(true_value, approximated_value):
     relative_error = np.absolute((true_value - approximated_value) / true_value)
     return relative_error
+
+def standardized_residual_calculator(true_value, predicted_value, predicted_error):
+    standardized_residual = (true_value - predicted_value) / predicted_error
+    return standardized_residual
+
+def absolute_standardized_residual_calculator(true_value, predicted_value, predicted_error):
+    absolute_standardized_residual = np.absolute(standardized_residual_calculator(true_value, predicted_value, predicted_error))
+    return absolute_standardized_residual
+
+def predicted_value_predicted_error_ratio_calculator(predicted_value, predicted_error):
+    ratio = predicted_value / predicted_error
+    return ratio
