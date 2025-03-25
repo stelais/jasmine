@@ -302,16 +302,21 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
-    rtm.set_satellite_dir(satellitedir=satellitedir)
-    rtm.recover_options() # Use same options as Stela on NCCS
     rtm.archive_run()
     shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
-    with open(f'{event_path}/pspl_pars.txt','w') as f:
+    with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
-    np.savetxt(fname=f'{event_path}/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
-    np.savetxt(f'{event_path}/grid_fit.txt', grid_fit_results)
-    rtm.config_InitCond(usesatellite=1)
+    np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
+    np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
+    modeltypes = ['PS','LS','LX','LO']
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    peak_threshold = 5
+    rtm.set_processors(nprocessors=processors)
+    rtm.set_event(event_path)
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    rtm.config_Reader(otherseasons=0, binning=1000000)
+    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
     rtm.Reader()
     rtm.InitCond()
     #Do FSPL fit for comparison
@@ -333,6 +338,56 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.Finalizer()
     logger.info('Done')
     return None
+
+#def run_event_from_file(event_path,pspl_thresh,processors,satellitedir,method='lm'):
+#    """ Wrapper Function to go from pspl_fit to final RTModel runs."""
+    #Create logging object
+#    logger = logging.getLogger()
+#     logging.basicConfig(filename=f'{event_path}/Data/ICGSfits.log',level=logging.INFO)
+#     #Send errors and stdout to logger.
+#     sys.stderr.write = logger.error
+#     sys.stdout.write = logger.info
+#     print('Printing to logger!')
+#     #Now run these in RTModel
+#     # Have RTModel prints go to log not stdout
+#     init_conds = pd.read_csv(f'{event_path}/Data/I)
+#
+#
+#     rtm = RTModel.RTModel()
+#     rtm.set_processors(nprocessors=processors)
+#     rtm.set_event(event_path)
+#     rtm.archive_run()
+#     shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
+#     #Write some outputs after clearing the directory
+#     modeltypes = ['PS','LS','LX','LO']
+#     rtm.set_satellite_dir(satellitedir=satellitedir)
+#     peak_threshold = 5
+#     rtm.set_processors(nprocessors=processors)
+#     rtm.set_event(event_path)
+#     rtm.set_satellite_dir(satellitedir=satellitedir)
+#     rtm.config_Reader(otherseasons=0, binning=1000000)
+#     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
+#     rtm.Reader()
+#     rtm.InitCond()
+#     #Do FSPL fit for comparison
+#     logger.info('Launching PS Fits')
+#     rtm.launch_fits('PS')
+#     rtm.ModelSelector('PS')
+#     logger.info('Launching LS Fits')
+#     num_init_cond = init_conds.shape[0]
+#     for n in range(num_init_cond):
+#         init_cond = list(init_conds[n,:])
+#         #launch each fit from the init conds
+#         rtm.LevMar(f'LSfit{n:03}',parameters = init_cond)
+#     rtm.ModelSelector('LS')
+#     logger.info('Launching LX and LO fits')
+#     rtm.launch_fits('LX')
+#     rtm.ModelSelector('LX')
+#     rtm.launch_fits('LO')
+#     rtm.ModelSelector('LO')
+#     rtm.Finalizer()
+#     logger.info('Done')
+#     return None
 
 def plot_pspl(pars,dataset,event_path):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
