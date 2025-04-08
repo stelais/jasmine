@@ -1,14 +1,14 @@
 import numpy as np
 from jasmine.investigator.astrophysics_formulas import absolute_pi_E_calculator
 
-def relative_error_percentage_calculator(true_value, approximated_value):
+def relative_difference_from_true_value_percentage_calculator(true_value, approximated_value):
     percent_error = 100 * np.absolute((true_value - approximated_value) / true_value)
     return percent_error
 
 
-def relative_error_calculator(true_value, approximated_value):
-    relative_error = np.absolute((true_value - approximated_value) / true_value)
-    return relative_error
+def relative_difference_from_true_value_calculator(true_value, approximated_value):
+    relative_difference = np.absolute((true_value - approximated_value) / true_value)
+    return relative_difference
 
 def standardized_residual_calculator(true_value, predicted_value, predicted_errorbar):
     standardized_residual = (true_value - predicted_value) / predicted_errorbar
@@ -82,7 +82,7 @@ def creating_statistics_table(working_data_, parallax_24_summary_df_, *, is_save
                 working_data_[f'{model_type}_{piE_type}_predicted_errorbar_predicted_value_ratio'])
 
             # Calculating parallax piE, piEE, piEN relative error
-            working_data_[f'{model_type}_{piE_type}_relative_error'] = relative_error_calculator(
+            working_data_[f'{model_type}_{piE_type}_relative_difference_from_true_value'] = relative_difference_from_true_value_calculator(
                 working_data_[f'{piE_type}'],
                 working_data_[f'{model_type}_model_{piE_type}'])
     if is_save_:
