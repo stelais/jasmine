@@ -10,16 +10,16 @@ def relative_error_calculator(true_value, approximated_value):
     relative_error = np.absolute((true_value - approximated_value) / true_value)
     return relative_error
 
-def standardized_residual_calculator(true_value, predicted_value, predicted_error):
-    standardized_residual = (true_value - predicted_value) / predicted_error
+def standardized_residual_calculator(true_value, predicted_value, predicted_errorbar):
+    standardized_residual = (true_value - predicted_value) / predicted_errorbar
     return standardized_residual
 
-def absolute_standardized_residual_calculator(true_value, predicted_value, predicted_error):
-    absolute_standardized_residual = np.absolute(standardized_residual_calculator(true_value, predicted_value, predicted_error))
+def absolute_standardized_residual_calculator(true_value, predicted_value, predicted_errorbar):
+    absolute_standardized_residual = np.absolute(standardized_residual_calculator(true_value, predicted_value, predicted_errorbar))
     return absolute_standardized_residual
 
-def predicted_value_predicted_error_ratio_calculator(predicted_value, predicted_error):
-    ratio = predicted_value / predicted_error
+def predicted_value_predicted_errorbar_ratio_calculator(predicted_value, predicted_errorbar):
+    ratio = predicted_value / predicted_errorbar
     return ratio
 
 def creating_statistics_table(working_data_, parallax_24_summary_df_, *, is_save_=False,
@@ -64,22 +64,22 @@ def creating_statistics_table(working_data_, parallax_24_summary_df_, *, is_save
 
             # Ratio of predicted value to predicted error
             working_data_[
-                f'{model_type}_{piE_type}_predicted_value_predicted_error_ratio'] = predicted_value_predicted_error_ratio_calculator(
+                f'{model_type}_{piE_type}_predicted_value_predicted_errorbar_ratio'] = predicted_value_predicted_errorbar_ratio_calculator(
                 working_data_[f'{model_type}_model_{piE_type}'], working_data_[f'{model_type}_model_{piE_type}_error'])
 
             # Absolute Ratio of predicted value to predicted error
-            working_data_[f'{model_type}_{piE_type}_absolute_predicted_value_predicted_error_ratio'] = np.abs(
-                working_data_[f'{model_type}_{piE_type}_predicted_value_predicted_error_ratio'])
+            working_data_[f'{model_type}_{piE_type}_absolute_predicted_value_predicted_errorbar_ratio'] = np.abs(
+                working_data_[f'{model_type}_{piE_type}_predicted_value_predicted_errorbar_ratio'])
 
             # Inverse. Ratio of predicted error to predicted value
-            working_data_[f'{model_type}_{piE_type}_predicted_error_predicted_value_ratio'] = working_data_[
+            working_data_[f'{model_type}_{piE_type}_predicted_errorbar_predicted_value_ratio'] = working_data_[
                                                                                                  f'{model_type}_model_{piE_type}_error'] / \
                                                                                               working_data_[
                                                                                                  f'{model_type}_model_{piE_type}']
 
             # Inverse. Absolute Ratio of predicted error to predicted value
-            working_data_[f'{model_type}_{piE_type}_absolute_predicted_error_predicted_value_ratio'] = np.abs(
-                working_data_[f'{model_type}_{piE_type}_predicted_error_predicted_value_ratio'])
+            working_data_[f'{model_type}_{piE_type}_absolute_predicted_errorbar_predicted_value_ratio'] = np.abs(
+                working_data_[f'{model_type}_{piE_type}_predicted_errorbar_predicted_value_ratio'])
 
             # Calculating parallax piE, piEE, piEN relative error
             working_data_[f'{model_type}_{piE_type}_relative_error'] = relative_error_calculator(
