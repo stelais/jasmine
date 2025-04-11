@@ -40,7 +40,8 @@ def creating_all_directories_with_files(*,
         creating_files(lightcurve_number_=lightcurve_number_,
                        master_file_path_=light_curve_master_file,
                        data_input_folder_path_=data_input_folder_path_,
-                       limb_darkening_=limb_darkening_)
+                       limb_darkening_=limb_darkening_,
+                       folder_to_be_created_path_=folder_to_be_created_path_)
         print(f'{name_prefix} DONE')
 
     return None
@@ -71,7 +72,8 @@ def creating_one_directory_with_files(*,
     creating_files(lightcurve_number_=lightcurve_number_,
                    master_file_path_=light_curve_master_file,
                    data_input_folder_path_=data_input_folder_path_,
-                   limb_darkening_=limb_darkening_)
+                   limb_darkening_=limb_darkening_,
+                   folder_to_be_created_path_=folder_to_be_created_path_)
     print(f'{name_prefix} DONE')
     return None
 
@@ -100,18 +102,18 @@ def creating_directories(*, lightcurve_number_,
 
 
 def creating_files(*, lightcurve_number_,
-                   general_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
-                                        'merida/RTModel_runs/ian',
                    master_file_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
                                      'merida/data/lightcurves_from_ian/stela_list.txt',
                    data_input_folder_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
                                            'merida/RTModel_runs/ian',
+                   folder_to_be_created_path_='/Users/stela/Documents/Scripts/ai_microlensing/'
+                                               'merida/RTModel_runs/ian_planet',
                    limb_darkening_=0.5633):
     """
     Create files for the moa event following RTModel structure
     """
     name_prefix = f'si{lightcurve_number_:02}'
-    event_folder = f'{general_folder_path_}/{name_prefix}'
+    event_folder = f'{folder_to_be_created_path_}/{name_prefix}'
     data_folder = f'{event_folder}/Data'
 
     if os.path.exists(f'{data_folder}/MOA.dat'):
@@ -147,7 +149,7 @@ def creating_files(*, lightcurve_number_,
 if __name__ == '__main__':
     # EXAMPLE USAGE
     general_path = '/Users/stela/Documents/Scripts/ai_microlensing'
-    folder_to_be_created = f'{general_path}/merida/RTModel_runs/ian'
+    folder_to_be_created = f'{general_path}/merida/RTModel_runs/ian_planet'
     master_input_folder = f'{general_path}/merida/data/lightcurves_from_ian'
     data_input_folder = f'{general_path}/merida/data/lightcurves_from_ian/'
 
