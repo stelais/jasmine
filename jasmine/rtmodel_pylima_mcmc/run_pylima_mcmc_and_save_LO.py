@@ -8,8 +8,9 @@ import multiprocessing as mul
 from pyLIMA import event
 from pyLIMA import telescopes
 from pyLIMA.models import FSBL_model
-from pyLIMA.fits import MCMC_fit
+from pyLIMA.fits import MCMC_fit, TRF_fit
 from pyLIMA.models import pyLIMA_fancy_parameters
+from pyLIMA.outputs import pyLIMA_plots
 
 from jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
 from jasmine.files_organizer import ra_and_dec_conversions as radec
@@ -77,33 +78,39 @@ def main(general_path_for_rtmodel_run_,
 
 
 
-
-
-
-
-    #     [time,mag,err_mag]
-    telescope_1 = telescopes.Telescope(name='RomanW146',
-                                       camera_filter='W146',
-                                       lightcurve=data_1[['HJD','flux','err']].values,
-                                       lightcurve_names=['time','flux', 'err_flux' ],
-                                       lightcurve_units=['HJD','flux', 'flux' ])
-    telescope_2 = telescopes.Telescope(name='RomanZ087',
-                                       camera_filter='Z087',
-                                       lightcurve=data_2[['HJD','flux','err']].values,
-                                       lightcurve_names=['time','flux', 'err_flux' ],
-                                       lightcurve_units=['HJD','flux', 'flux' ])
-    telescope_3 = telescopes.Telescope(name='RomanK213',
-                                       camera_filter='K213',
-                                       lightcurve=data_3[['HJD','flux','err']].values,
-                                       lightcurve_names=['time','flux', 'err_flux' ],
-                                       lightcurve_units=['HJD','flux', 'flux' ])
-
     ### IMPORTANT: Tell the code that Roman is in space!
     # read in ephemerides files
     names = ['time', 'RA','Dec', 'dist', 'deldot']
     t1_ephem = pd.read_csv(f'{satellite_directory_}/satellite1.txt',names=names,comment='$',sep = '\s+')
     t2_ephem = pd.read_csv(f'{satellite_directory_}/satellite2.txt', names=names, comment='$',sep = '\s+')
     t3_ephem = pd.read_csv(f'{satellite_directory_}/satellite3.txt', names=names, comment='$',sep = '\s+')
+
+    data_2 = data_2.reset_index()
+    data_3 = data_3.reset_index()
+    data_1.loc[:,'HJD'] = t1_ephem.loc[:,'time']
+    data_2.loc[:,'HJD'] = t2_ephem.loc[:,'time']
+    data_3.loc[:,'HJD'] = t3_ephem.loc[:,'time']
+    #print(data_3)
+    #     [time,mag,err_mag]
+    telescope_1 = telescopes.Telescope(name='RomanW146',
+                                       camera_filter='W146',
+                                       lightcurve=data_1[['HJD', 'flux', 'err']].values,
+                                       lightcurve_names=['time', 'flux', 'err_flux'],
+                                       lightcurve_units=['HJD', 'flux', 'flux'])
+    telescope_2 = telescopes.Telescope(name='RomanZ087',
+                                       camera_filter='Z087',
+                                       lightcurve=data_2[['HJD', 'flux', 'err']].values,
+                                       lightcurve_names=['time', 'flux', 'err_flux'],
+                                       lightcurve_units=['HJD', 'flux', 'flux'])
+    telescope_3 = telescopes.Telescope(name='RomanK213',
+                                       camera_filter='K213',
+                                       lightcurve=data_3[['HJD', 'flux', 'err']].values,
+                                       lightcurve_names=['time', 'flux', 'err_flux'],
+                                       lightcurve_units=['HJD', 'flux', 'flux'])
+
+
+
+
     #print(telescope_1.spacecraft_positions)
 
     telescope_1.location = 'Space'
@@ -117,17 +124,19 @@ def main(general_path_for_rtmodel_run_,
     telescope_3.spacecraft_positions['photometry'] = t3_ephem[['time','RA', 'Dec', 'dist']].values
     #print(telescope_1.spacecraft_positions)
     # Adding limb darkening
-    telescope_1.ld_gamma = ald_1
-    telescope_2.ld_gamma = ald_2
-    telescope_3.ld_gamma = ald_3
+    telescope_1.ld_a1 = ald_1
+    telescope_2.ld_a1 = ald_2
+    telescope_3.ld_a1 = ald_3
+
 
     ### Append these two telescope data sets to your EVENT object.
     print('Appending data...')
     your_event.telescopes.append(telescope_1)
     your_event.telescopes.append(telescope_2)
     your_event.telescopes.append(telescope_3)
-
-
+    print(telescope_1.name,telescope_1.ld_a1)
+    print(telescope_2.name, telescope_2.ld_a1)
+    print(telescope_3.name, telescope_3.ld_a1)
     ### Define the survey telescope that you want to use to align all other data sets to.
     ### We recommend using the data set with the most measurements covering the gretest
     ### time span of observations:
@@ -172,15 +181,16 @@ def main(general_path_for_rtmodel_run_,
              np.log10(rtm_model.model_parameters.tE), np.log10(rtm_model.model_parameters.rho),
              np.log10(rtm_model.model_parameters.separation), np.log10(rtm_model.model_parameters.mass_ratio),
              rtm_model.model_parameters.alpha, rtm_model.model_parameters.piEN, rtm_model.model_parameters.piEE,
-             rtm_model.model_parameters.gamma1,rtm_model.model_parameters.gamma2,rtm_model.model_parameters.gammaz])
+             365.25*rtm_model.model_parameters.gamma1,365.25*rtm_model.model_parameters.gamma2,365.25*rtm_model.model_parameters.gammaz])
     else:
         print('Model not found - only supported LS, LO and LX ')
         return
 
 
     print('MCMC Fitting...')
-    my_fit = MCMC_fit.MCMCfit(model_to_mcmc, MCMC_links=number_of_steps_, MCMC_walkers=number_of_walkers_,
-                              loss_function='chi2')
+    #my_fit = MCMC_fit.MCMCfit(model_to_mcmc, MCMC_links=number_of_steps_, MCMC_walkers=number_of_walkers_,
+    #                          loss_function='chi2')
+    my_fit = TRF_fit.TRFfit(model_to_mcmc,loss_function='chi2')
     print('Defining guess parameters...')
     my_fit.model_parameters_guess = guess_parameters
     print('Defining constraints...')
@@ -199,12 +209,11 @@ def main(general_path_for_rtmodel_run_,
             my_fit.fit_parameters['v_perp'][1] = [-1000.0, 1000]
             my_fit.fit_parameters['v_radial'][1] = [-1000.0, 1000]
 
-
-
+    #print(my_fit.model_chi2(parameters=guess_parameters))
     print(my_fit.fit_parameters)
     pool = mul.Pool(processes=number_of_processors_)
     print('Start fitting...')
-    my_fit.fit(computational_pool=pool)
+    my_fit.fit()#computational_pool=pool
     #my_fit.fit_outputs()
     print('Fitting done!')
     # File #1
@@ -217,12 +226,16 @@ def main(general_path_for_rtmodel_run_,
     parameters_names = list(my_fit.model.model_dictionnary.keys())
     best_model_ndarray = my_fit.fit_results['best_model']
     fit_time = my_fit.fit_results['fit_time']
-    MCMC_links = my_fit.MCMC_links
-    MCMC_walkers = my_fit.MCMC_walkers
-    MCMC_chains_with_fluxes = my_fit.fit_results['MCMC_chains_with_fluxes']
+    #MCMC_links = my_fit.MCMC_links
+    #MCMC_walkers = my_fit.MCMC_walkers
+    #MCMC_chains_with_fluxes = my_fit.fit_results['MCMC_chains_with_fluxes']
 
+    print(my_fit.model_chi2(parameters=best_model_ndarray))
+    #print(my_fit.model_likelihood(parameters=best_model_ndarray))
     saving_results_path = pylima_data_folder_
     # Write File #1
+    pyLIMA_plots.plot_lightcurves(model_to_mcmc,guess_parameters)
+    my_fit.fit_outputs(bokeh_plot=True,bokeh_plot_name=f'{pylima_data_folder_}/{event_name}plot.html')
     print('Saving best model...')
     with open(f'{saving_results_path}/{event_name_}_best_model{run_name}_{rtm_model.model_type}.csv', 'w', newline='') as csvfile1:
         csvfile1.write(f"# Event name: {event_name}\n")
@@ -251,19 +264,19 @@ def main(general_path_for_rtmodel_run_,
 
         writer = csv.writer(csvfile2)
         # Write header
-        writer.writerow(parameters_names + ['likelihood'])
+        writer.writerow(parameters_names + ['likelihood','prior'])
         # Write data
         for quoted_arrays in MCMC_chains_with_fluxes:
             for array in quoted_arrays:
                 writer.writerow(array)
-
     print('All done!')
 
 if __name__ == '__main__':
     start = time.time()
-    event_name = 'event_0_1_2133'
-    number_of_process = 1
-    number_of_steps = 1
+    event_name = 'event_0_90_1748'
+    model_name = 'LO0001-4'
+    number_of_process = 8
+    number_of_steps = 10
     number_of_walkers = 2
     # ###########################
     #     gs66-ponyta:
@@ -272,12 +285,12 @@ if __name__ == '__main__':
     # pylima_data_folder = ('/Users/sishitan/Documents/Scripts/RTModel_project/'
     #                       'rtmodel_pylima/datachallenge_events/pylima_format_data')
     # ############################
-    general_path_for_rtmodel_run = '/Users/jmbrashe/VBBOrbital/NEWGULLS/MCMC/sample_rtmodel_v2.4/event_0_4_2211'
+    general_path_for_rtmodel_run = f'/Users/jmbrashe/VBBOrbital/NEWGULLS/MCMC/sample_rtmodel_v2.4/{event_name}'
     # where the data in pylima format will be saved
     pylima_data_folder = '/Users/jmbrashe/VBBOrbital/NEWGULLS/MCMC/pylima_outputs'
-    model_path_for_initial_conditions = f'{general_path_for_rtmodel_run}/Models/LS0229-0.txt'
+    model_path_for_initial_conditions = f'{general_path_for_rtmodel_run}/Models/{model_name}.txt'
     satellite_directory = '/Users/jmbrashe/VBBOrbital/NEWGULLS/MCMC/satellitedir'
-    main(event_name_='event_0_4_2211',
+    main(event_name_=event_name,
          general_path_for_rtmodel_run_=general_path_for_rtmodel_run,
          pylima_data_folder_=pylima_data_folder,
          model_path_for_initial_conditions_=model_path_for_initial_conditions,
