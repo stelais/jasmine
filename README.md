@@ -2,11 +2,18 @@
 JASMINE: **J**oint **A**nalysis of **S**imulation for **M**icrolensing **IN**terested **E**vents
 
 ---
-pip installable as `jasmine-astro`
+Installing from github (should be most updated available version):
+```
+git clone https://github.com/stelais/jasmine.git
+pip install -r requirements.txt
+```
+
+pip installable as a pip package `jasmine-astro` (usually a bit behind the latest version, but stable):
 ```
 pip install jasmine-astro
 ```
 ---
+Description below will probably work, but is outdated. Let us know if you need help with the package.
 ## 1. Reading RTModel outputs
 ### `ModelResults` class
 ```

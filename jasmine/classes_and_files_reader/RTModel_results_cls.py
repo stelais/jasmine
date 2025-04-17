@@ -49,10 +49,12 @@ class SingleLensSingleSourcePS:
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
     rho_error: float
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
 
     def __init__(self, file_to_be_read):
@@ -70,10 +72,12 @@ class SingleLensSingleSourcePS:
             self.rho = float(parameters[3])
             self.rho_error = float(errors[3])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[4]), float(parameters[6])
-            self.sources = float(parameters[5]), float(parameters[7])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[4])
+            self.sources = float(parameters[5])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[4])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[5])
 
 
 @dataclass
@@ -96,10 +100,12 @@ class SingleLensSingleSourceWithParallaxPX:
     piEE: float  # Parallax component along East
     piEE_error: float
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
 
     def __init__(self, file_to_be_read):
@@ -121,10 +127,12 @@ class SingleLensSingleSourceWithParallaxPX:
             self.piEE = float(parameters[5])
             self.piEE_error = float(errors[5])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[6]), float(parameters[8])
-            self.sources = float(parameters[7]), float(parameters[9])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[6])
+            self.sources = float(parameters[7])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[6])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[7])
 
 
 @dataclass
@@ -149,10 +157,12 @@ class SingleLensBinarySourceBS:
     rho1: float  # Source radius for the primary source (internally fit in logarithmic (ln) scale)
     rho1_error: float
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 7
@@ -175,10 +185,12 @@ class SingleLensBinarySourceBS:
             self.rho1 = float(parameters[6])
             self.rho1_error = float(errors[6])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[7]), float(parameters[9])
-            self.sources = float(parameters[8]), float(parameters[10])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[7])
+            self.sources = float(parameters[8])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[7])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[8])
 
 
 @dataclass
@@ -199,10 +211,12 @@ class SingleLensBinarySourceWithXallarapBO:
     phi: float  # Phase of the orbit from the passage on the line of nodes
     qs: float  # Mass ratio of the secondary to the primary source
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
 
     def __init__(self, file_to_be_read):
@@ -232,10 +246,12 @@ class SingleLensBinarySourceWithXallarapBO:
             self.qs = float(parameters[9])
             self.qs_error = float(errors[9])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[10]), float(parameters[12])
-            self.sources = float(parameters[11]), float(parameters[13])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[10])
+            self.sources = float(parameters[11])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[10])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[11])
 
 
 @dataclass
@@ -260,10 +276,12 @@ class BinaryLensSingleSourceLS:
     t0: float  # Closest approach time in HJD to the barycenter
     t0_error: float
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 7
@@ -286,10 +304,12 @@ class BinaryLensSingleSourceLS:
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[7]), float(parameters[9])
-            self.sources = float(parameters[8]), float(parameters[10])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[7])
+            self.sources = float(parameters[8])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[7])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[8])
 
 
 @dataclass
@@ -318,10 +338,12 @@ class BinaryLensSingleSourceWithParallaxLX:
     piEE: float  # Parallax component along East
     piEE_error: float
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 9
@@ -348,10 +370,12 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.piEE = float(parameters[8])
             self.piEE_error = float(errors[8])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[9]), float(parameters[11])
-            self.sources = float(parameters[10]), float(parameters[12])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[9])
+            self.sources = float(parameters[10])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[9])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[10])
 
 
 @dataclass
@@ -386,10 +410,12 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     gammaz: float  # Angular velocity along the line of sight
     gammaz_error: float
     chi2: float  # Chi2 value for the fit
-    blends: tuple
-    sources: tuple
-    blending: np.array
-    baseline: np.array
+    blends: float
+    sources: float
+    blending: float
+    blending_error: float
+    baseline: float
+    baseline_error: float
 
 
     def __init__(self, file_to_be_read):
@@ -423,7 +449,10 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.gammaz = float(parameters[11])
             self.gammaz_error = float(errors[11])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[12]), float(parameters[14])
-            self.sources = float(parameters[13]), float(parameters[15])
-            self.blending = np.array(self.blends) / np.array(self.sources)
-            self.baseline = -2.5 * np.log10(np.array(self.blends) + np.array(self.sources))
+            self.blends = float(parameters[12])
+            self.sources = float(parameters[13])
+            self.blending = self.blends / self.sources
+            self.blending_error = float(errors[12])
+            self.baseline = -2.5 * np.log10(self.blends + self.sources)
+            self.baseline_error = float(errors[13])
+
