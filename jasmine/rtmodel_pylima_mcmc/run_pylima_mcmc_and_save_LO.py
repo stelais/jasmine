@@ -16,6 +16,7 @@ from jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
 from jasmine.files_organizer import ra_and_dec_conversions as radec
 #from jasmine.files_organizer.new_data_files_for_pylima import rtmodel_data_to_pylima as new_data_files
 #from jasmine.constants import limb_darkening_parameters
+import os
 
 def main(general_path_for_rtmodel_run_,
          pylima_data_folder_,
@@ -296,6 +297,7 @@ def main(general_path_for_rtmodel_run_,
     print('All done!')
 
 if __name__ == '__main__':
+    os.environ["OMP_NUM_THREADS"] = "1"
     start = time.time()
     event_name = 'event_0_90_1748'
     model_name = 'LO0001-4'
@@ -322,7 +324,7 @@ if __name__ == '__main__':
          number_of_processors_=number_of_process,
          number_of_steps_=number_of_steps,
          number_of_walkers_=number_of_walkers,
-         run_name=f'_{number_of_steps}_{number_of_walkers}')
+         run_name=f'_{number_of_steps}_{number_of_walkers}_{model_name}')
     finish = time.time()
     print('Pylima MCMC took', finish - start, f'seconds for event {event_name} using {number_of_process} processors,'
                                               f'{number_of_steps} number_of_steps '
