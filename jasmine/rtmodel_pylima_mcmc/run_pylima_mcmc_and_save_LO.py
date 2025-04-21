@@ -8,7 +8,7 @@ import multiprocessing as mul
 from pyLIMA import event
 from pyLIMA import telescopes
 from pyLIMA.models import FSBL_model
-from pyLIMA.fits import MCMC_fit, TRF_fit
+from pyLIMA.fits import MCMCHDF5_fit ,TRF_fit
 from pyLIMA.models import pyLIMA_fancy_parameters
 from pyLIMA.outputs import pyLIMA_plots
 
@@ -187,14 +187,44 @@ def main(general_path_for_rtmodel_run_,
         return
 
 
-    print('MCMC Fitting...')
+    print('Gradient Fitting...')
     #my_fit = MCMC_fit.MCMCfit(model_to_mcmc, MCMC_links=number_of_steps_, MCMC_walkers=number_of_walkers_,
     #                          loss_function='chi2')
-    my_fit = TRF_fit.TRFfit(model_to_mcmc,loss_function='chi2')
+    gradient_fit = TRF_fit.TRFfit(model_to_mcmc,loss_function='chi2')
     print('Defining guess parameters...')
-    my_fit.model_parameters_guess = guess_parameters
+    gradient_fit.model_parameters_guess = guess_parameters
     print('Defining constraints...')
     #use very wide constraints.
+    # my_fit.fit_parameters['t0'][1] = [2458000, 2464000]  # PyLima limits for t0 doesnt allow roman simulations
+    gradient_fit.fit_parameters['u0'][1] = [-5.0, 5.0]  # PyLima has a short limit for u0
+    gradient_fit.fit_parameters['log_rho'][1] = [-5.3, -0.3]  # PyLima has a low limit for rho
+    gradient_fit.fit_parameters['log_separation'][1] = [-5.3, 2]
+    gradient_fit.fit_parameters['log_mass_ratio'][1] = [-7, 0]
+    print(rtm_model.model_type)
+    if (rtm_model.model_type == 'LX') or (rtm_model.model_type == 'LO'):
+        gradient_fit.fit_parameters['piEN'][1] = [-2.0, 2.0]
+        gradient_fit.fit_parameters['piEE'][1] = [-2.0, 2.0]
+        if rtm_model.model_type == 'LO':
+            gradient_fit.fit_parameters['v_para'][1] = [-1000.0, 1000]
+            gradient_fit.fit_parameters['v_perp'][1] = [-1000.0, 1000]
+            gradient_fit.fit_parameters['v_radial'][1] = [-1000.0, 1000]
+
+    #print(my_fit.model_chi2(parameters=guess_parameters))
+    #print(gradient_fit.fit_parameters)
+
+    gradient_fit.fit()#computational_pool=pool
+    #my_fit.fit_outputs()
+    print('TR Fit Done!')
+    # File #1
+    # Gather necessary data
+    print('MCMC Fitting')
+    hdf5path = f'{pylima_data_folder_}/{event_name_}_mcmc_chain{run_name}_{rtm_model.model_type}.hdf5'
+    my_fit = MCMCHDF5_fit.MCMCfit(model_to_mcmc, MCMC_links=number_of_steps_, MCMC_walkers=number_of_walkers_,
+                              loss_function='chi2',hdf5path=hdf5path)
+    print('Defining guess parameters...')
+    my_fit.model_parameters_guess = gradient_fit.fit_results['best_model']
+    print('Defining constraints...')
+    # use very wide constraints.
     # my_fit.fit_parameters['t0'][1] = [2458000, 2464000]  # PyLima limits for t0 doesnt allow roman simulations
     my_fit.fit_parameters['u0'][1] = [-5.0, 5.0]  # PyLima has a short limit for u0
     my_fit.fit_parameters['log_rho'][1] = [-5.3, -0.3]  # PyLima has a low limit for rho
@@ -209,15 +239,9 @@ def main(general_path_for_rtmodel_run_,
             my_fit.fit_parameters['v_perp'][1] = [-1000.0, 1000]
             my_fit.fit_parameters['v_radial'][1] = [-1000.0, 1000]
 
-    #print(my_fit.model_chi2(parameters=guess_parameters))
-    print(my_fit.fit_parameters)
     pool = mul.Pool(processes=number_of_processors_)
-    print('Start fitting...')
-    my_fit.fit()#computational_pool=pool
-    #my_fit.fit_outputs()
-    print('Fitting done!')
-    # File #1
-    # Gather necessary data
+    my_fit.fit(computational_pool=pool)
+    print('MCMC Done')
     event_name = my_fit.model.event.name
     ra = my_fit.model.event.ra
     dec = my_fit.model.event.dec
@@ -226,16 +250,15 @@ def main(general_path_for_rtmodel_run_,
     parameters_names = list(my_fit.model.model_dictionnary.keys())
     best_model_ndarray = my_fit.fit_results['best_model']
     fit_time = my_fit.fit_results['fit_time']
-    #MCMC_links = my_fit.MCMC_links
-    #MCMC_walkers = my_fit.MCMC_walkers
-    #MCMC_chains_with_fluxes = my_fit.fit_results['MCMC_chains_with_fluxes']
-
-    print(my_fit.model_chi2(parameters=best_model_ndarray))
+    MCMC_links = my_fit.MCMC_links
+    MCMC_walkers = my_fit.MCMC_walkers
+    MCMC_chains_with_fluxes = my_fit.fit_results['MCMC_chains_with_fluxes']
+    #print(my_fit.model_chi2(parameters=best_model_ndarray))
     #print(my_fit.model_likelihood(parameters=best_model_ndarray))
     saving_results_path = pylima_data_folder_
     # Write File #1
-    pyLIMA_plots.plot_lightcurves(model_to_mcmc,guess_parameters)
-    my_fit.fit_outputs(bokeh_plot=True,bokeh_plot_name=f'{pylima_data_folder_}/{event_name}plot.html')
+    #pyLIMA_plots.plot_lightcurves(model_to_mcmc,guess_parameters)
+    #my_fit.fit_outputs(bokeh_plot=True,bokeh_plot_name=f'{pylima_data_folder_}/{event_name}plot.html')
     print('Saving best model...')
     with open(f'{saving_results_path}/{event_name_}_best_model{run_name}_{rtm_model.model_type}.csv', 'w', newline='') as csvfile1:
         csvfile1.write(f"# Event name: {event_name}\n")
@@ -261,7 +284,6 @@ def main(general_path_for_rtmodel_run_,
         csvfile2.write(f"# Fit time: {fit_time}\n")
         csvfile2.write(f"# MCMC links: {MCMC_links}\n")
         csvfile2.write(f"# MCMC walkers: {MCMC_walkers}\n")
-
         writer = csv.writer(csvfile2)
         # Write header
         writer.writerow(parameters_names + ['likelihood','prior'])
@@ -269,6 +291,8 @@ def main(general_path_for_rtmodel_run_,
         for quoted_arrays in MCMC_chains_with_fluxes:
             for array in quoted_arrays:
                 writer.writerow(array)
+    sampler = my_fit.fit_results['fit_object']
+    print(f'Acceptance Ratio =  {sampler.acceptance_fraction}')
     print('All done!')
 
 if __name__ == '__main__':
@@ -276,7 +300,7 @@ if __name__ == '__main__':
     event_name = 'event_0_90_1748'
     model_name = 'LO0001-4'
     number_of_process = 8
-    number_of_steps = 10
+    number_of_steps = 5000
     number_of_walkers = 2
     # ###########################
     #     gs66-ponyta:
