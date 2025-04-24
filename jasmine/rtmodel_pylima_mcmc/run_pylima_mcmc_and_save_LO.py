@@ -1,3 +1,10 @@
+import os
+# restrict numpy multithreading
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import csv
 import time
 
@@ -8,7 +15,7 @@ import multiprocessing as mul
 from pyLIMA import event
 from pyLIMA import telescopes
 from pyLIMA.models import FSBL_model
-from pyLIMA.fits import MCMCHDF5_fit ,TRF_fit
+from pyLIMA.fits import MCMCconverge_fit, MCMCHDF5_fit,TRF_fit
 from pyLIMA.models import pyLIMA_fancy_parameters
 from pyLIMA.outputs import pyLIMA_plots
 
@@ -16,7 +23,6 @@ from jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
 from jasmine.files_organizer import ra_and_dec_conversions as radec
 #from jasmine.files_organizer.new_data_files_for_pylima import rtmodel_data_to_pylima as new_data_files
 #from jasmine.constants import limb_darkening_parameters
-import os
 
 def main(general_path_for_rtmodel_run_,
          pylima_data_folder_,
@@ -199,16 +205,16 @@ def main(general_path_for_rtmodel_run_,
     # my_fit.fit_parameters['t0'][1] = [2458000, 2464000]  # PyLima limits for t0 doesnt allow roman simulations
     gradient_fit.fit_parameters['u0'][1] = [-5.0, 5.0]  # PyLima has a short limit for u0
     gradient_fit.fit_parameters['log_rho'][1] = [-5.3, -0.3]  # PyLima has a low limit for rho
-    gradient_fit.fit_parameters['log_separation'][1] = [-5.3, 2]
-    gradient_fit.fit_parameters['log_mass_ratio'][1] = [-7, 0]
+    gradient_fit.fit_parameters['log_separation'][1] = [-5.3, 2.]
+    gradient_fit.fit_parameters['log_mass_ratio'][1] = [-7., 0.]
     print(rtm_model.model_type)
     if (rtm_model.model_type == 'LX') or (rtm_model.model_type == 'LO'):
         gradient_fit.fit_parameters['piEN'][1] = [-2.0, 2.0]
         gradient_fit.fit_parameters['piEE'][1] = [-2.0, 2.0]
         if rtm_model.model_type == 'LO':
-            gradient_fit.fit_parameters['v_para'][1] = [-1000.0, 1000]
-            gradient_fit.fit_parameters['v_perp'][1] = [-1000.0, 1000]
-            gradient_fit.fit_parameters['v_radial'][1] = [-1000.0, 1000]
+            gradient_fit.fit_parameters['v_para'][1] = [-365.25, 365.25]
+            gradient_fit.fit_parameters['v_perp'][1] = [-365.25, 365.25]
+            gradient_fit.fit_parameters['v_radial'][1] = [1E-7, 365.25]
 
     #print(my_fit.model_chi2(parameters=guess_parameters))
     #print(gradient_fit.fit_parameters)
@@ -229,19 +235,19 @@ def main(general_path_for_rtmodel_run_,
     # my_fit.fit_parameters['t0'][1] = [2458000, 2464000]  # PyLima limits for t0 doesnt allow roman simulations
     my_fit.fit_parameters['u0'][1] = [-5.0, 5.0]  # PyLima has a short limit for u0
     my_fit.fit_parameters['log_rho'][1] = [-5.3, -0.3]  # PyLima has a low limit for rho
-    my_fit.fit_parameters['log_separation'][1] = [-5.3, 2]
-    my_fit.fit_parameters['log_mass_ratio'][1] = [-7, 0]
+    my_fit.fit_parameters['log_separation'][1] = [-5.3, 2.]
+    my_fit.fit_parameters['log_mass_ratio'][1] = [-7., 0.]
     print(rtm_model.model_type)
     if (rtm_model.model_type == 'LX') or (rtm_model.model_type == 'LO'):
         my_fit.fit_parameters['piEN'][1] = [-2.0, 2.0]
         my_fit.fit_parameters['piEE'][1] = [-2.0, 2.0]
         if rtm_model.model_type == 'LO':
-            my_fit.fit_parameters['v_para'][1] = [-1000.0, 1000]
-            my_fit.fit_parameters['v_perp'][1] = [-1000.0, 1000]
-            my_fit.fit_parameters['v_radial'][1] = [-1000.0, 1000]
+            my_fit.fit_parameters['v_para'][1] = [-365.25, 365.25]
+            my_fit.fit_parameters['v_perp'][1] = [-365.25, 365.25]
+            my_fit.fit_parameters['v_radial'][1] = [1E-7, 365.25]
 
-    pool = mul.Pool(processes=number_of_processors_)
-    my_fit.fit(computational_pool=pool)
+    #pool = mul.Pool(processes=number_of_processors_)
+    my_fit.fit(computational_pool=None)
     print('MCMC Done')
     event_name = my_fit.model.event.name
     ra = my_fit.model.event.ra
@@ -293,15 +299,16 @@ def main(general_path_for_rtmodel_run_,
             for array in quoted_arrays:
                 writer.writerow(array)
     sampler = my_fit.fit_results['fit_object']
+    print(f'Autocorr Time = {sampler.get_autocorr_time(tol=0)}')
     print(f'Acceptance Ratio =  {sampler.acceptance_fraction}')
     print('All done!')
 
 if __name__ == '__main__':
     os.environ["OMP_NUM_THREADS"] = "1"
     start = time.time()
-    event_name = 'event_0_90_1748'
-    model_name = 'LO0001-4'
-    number_of_process = 8
+    event_name = 'event_0_128_2350'
+    model_name = 'LX0000-1'
+    number_of_process = 1
     number_of_steps = 5000
     number_of_walkers = 2
     # ###########################
