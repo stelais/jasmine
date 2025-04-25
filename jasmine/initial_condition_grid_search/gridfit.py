@@ -120,14 +120,13 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     alpha = alpha.flatten()
     #print(s.shape[0])
     grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
-    print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]}')
+    print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
     print(f'Checking {s.shape[0]} Models on grid!')
     for i in range(s.shape[0]):
         fsblpars = [s[i],q[i],alpha[i],tstar]
         print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar}')
         output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
         grid_results[i,:] = output
-        print()
         #if i%5000==0: print(f'{i} Models checked')
     print('Done checking models!')
     return grid_results
@@ -344,7 +343,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.launch_fits('LO')
     rtm.ModelSelector('LO')
     rtm.Finalizer()
-    print.info('Done')
+    print('Done')
     time1 = time.time()
     print(f'RTModel time: {time1 - time0}')
     return None
