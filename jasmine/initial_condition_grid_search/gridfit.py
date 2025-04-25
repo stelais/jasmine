@@ -7,6 +7,7 @@ import RTModel
 import shutil
 import os
 import matplotlib.pyplot as plt
+import time
 import logging
 import sys
 
@@ -103,7 +104,7 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
     return return_list
 
-def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,logger):
+def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2):
     """
         Fit grid of models to determine initial conditions
     """
@@ -119,16 +120,19 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     alpha = alpha.flatten()
     #print(s.shape[0])
     grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
-    logger.info(f'Checking {s.shape[0]} Models on grid!')
+    print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]}')
+    print(f'Checking {s.shape[0]} Models on grid!')
     for i in range(s.shape[0]):
         fsblpars = [s[i],q[i],alpha[i],tstar]
+        print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar}')
         output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
         grid_results[i,:] = output
-        if i%5000==0: logger.info(f'{i} Models checked')
-    logger.info('Done checking models!')
+        print()
+        #if i%5000==0: print(f'{i} Models checked')
+    print('Done checking models!')
     return grid_results
 
-def pspl_fit(event_path,dataset_list,logger,p0=None,init_ind = 0,method='lm'):
+def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
     """ Find best fitting PSPL Model"""
     data_list = []
     for i in range(len(dataset_list)):
@@ -137,21 +141,21 @@ def pspl_fit(event_path,dataset_list,logger,p0=None,init_ind = 0,method='lm'):
     VBMInstance.RelTol = 1e-03
     VBMInstance.Tol=1e-03
     if p0 is None:
-        logger.info('Setting default initial conditions')
+        print('Setting default initial conditions')
         t0_init = data_list[init_ind][np.argmin(data_list[init_ind][:,0]),-1]
         p0 = [0.1,10,t0_init]
     else:
-        logger.info('Using provided initial conditions')
+        print('Using provided initial conditions')
     #magnitude_list = []
     #source_flux_list = []
     #blend_flux_list = []
     if method =='lm':
-        logger.info('Using Levenberg-Marquardt')
-        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance,logger]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        print('Using Levenberg-Marquardt')
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
     else:
-        logger.info('Using some scipy.minimize')
-        res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance,logger],method=method)
-    logger.info('Done Fitting PSPL!')
+        print('Using some scipy.minimize')
+        res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance],method=method)
+    print('Done Fitting PSPL!')
     return res
 
 def calc_pspl_chi2(pars,args):
@@ -162,7 +166,7 @@ def calc_pspl_chi2(pars,args):
     data_list = args[0]
     ndatasets = args[1]
     VBMInstance = args[2]
-    logger = args[3]
+    #logger = args[3]
     pars_log = [np.log(pars[0]),np.log(pars[1]),pars[2]]
     #logger.info(pars)
     for i in range(ndatasets):
@@ -182,7 +186,7 @@ def calc_pspl_chi2(pars,args):
         magdata_list.append(data_list[i][:,0])
         magerr_list.append(data_list[i][:,1])
     chi2_list, chi2 = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
-    logger.info(chi2)
+    print(chi2)
     return chi2
 
 def calc_pspl_residuals(pars,args):
@@ -193,7 +197,7 @@ def calc_pspl_residuals(pars,args):
     data_list = args[0]
     ndatasets = args[1]
     VBMInstance = args[2]
-    logger = args[3]
+    #logger = args[3]
     pars_log = [np.log(pars[0]),np.log(pars[1]),pars[2]]
     #print(pars)
     for i in range(ndatasets):
@@ -214,16 +218,16 @@ def calc_pspl_residuals(pars,args):
         magerr_list.append(data_list[i][:,1])
     residuals = get_residuals(magnitude_list, magdata_list, magerr_list, ndatasets)
     chi2 = np.sum(np.power(residuals,2))
-    logger.info(f'chi2: {chi2}')
+    print(f'chi2: {chi2}')
     return residuals
 
 
-def filter_by_q(grid_result, logger,pspl_thresh=0):
+def filter_by_q(grid_result,pspl_thresh=0):
     """
     Finds best initial conditions on grid for each value of q.
     Does a very simple check for s>1 s<1, but this often will not find an s/1/s degeneracy.
     """
-    logger.info('Picking best models for each q.')
+    print('Picking best models for each mass ratio')
     q_list = list(grid_result['log(q)'].unique())
     best_grid_models = []
     for q in q_list:
@@ -269,34 +273,38 @@ def filter_by_q(grid_result, logger,pspl_thresh=0):
     init_cond[:, 1] = np.exp(init_cond[:, 1])
     init_cond[:, 4] = np.exp(init_cond[:, 4])
     init_cond[:, 5] = np.exp(init_cond[:, 5])
-    logger.info('Done!')
+    print('Done')
     return best_grid_models, init_cond
 
 def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,satellitedir,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     #Remove old log file if it exists. Mostly for quick troubleshoots.
-    try:
-        os.remove(path=f'{event_path}/Data/ICGS.log')
-    except FileNotFoundError: print('No log file exists. Continuing.')
+    #try:
+    #    os.remove(path=f'{event_path}/Data/ICGS.log')
+    #except FileNotFoundError: print('No log file exists. Continuing.')
     #Create logging object
-    logger = logging.getLogger()
-    logging.basicConfig(filename=f'{event_path}/Data/ICGS.log',level=logging.INFO)
+    #logger = logging.getLogger()
+    #logging.basicConfig(filename=f'{event_path}/Data/ICGS.log',level=logging.INFO)
     #Send errors and stdout to logger.
-    sys.stderr.write = logger.error
-    sys.stdout.write = logger.info
-    print('Printing to logger!')
+    #sys.stderr.write = logger.error
+    #sys.stdout.write = logger.info
+    #print('Printing to logger!')
     # First do the PSPL fit
-    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method,logger=logger)
+    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
     if method == 'lm':
         pspl_chi2 = pspl_results.cost*2
     else: pspl_chi2 = pspl_results.chi2
     pspl_pars = pspl_results.x
     #save pspl fit to a txt file
+    time0 = time.time()
     grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
-                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2,logger=logger)
+                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
+    time1 = time.time()
+    print(f'ICGS time: {time1-time0}')
+    time0 = time.time()
     names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
     grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
-    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,logger=logger,pspl_thresh=pspl_thresh)
+    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
     #Now run these in RTModel
     # Have RTModel prints go to log not stdout
     rtm = RTModel.RTModel()
@@ -320,23 +328,25 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.Reader()
     rtm.InitCond()
     #Do FSPL fit for comparison
-    logger.info('Launching PS Fits')
+    print('Launching PS Fits')
     rtm.launch_fits('PS')
     rtm.ModelSelector('PS')
-    logger.info('Launching LS Fits')
+    print('Launching LS Fits')
     num_init_cond = init_conds.shape[0]
     for n in range(num_init_cond):
         init_cond = list(init_conds[n,:])
         #launch each fit from the init conds
         rtm.LevMar(f'LSfit{n:03}',parameters = init_cond)
     rtm.ModelSelector('LS')
-    logger.info('Launching LX and LO fits')
+    print('Launching LX and LO fits')
     rtm.launch_fits('LX')
     rtm.ModelSelector('LX')
     rtm.launch_fits('LO')
     rtm.ModelSelector('LO')
     rtm.Finalizer()
-    logger.info('Done')
+    print.info('Done')
+    time1 = time.time()
+    print(f'RTModel time: {time1 - time0}')
     return None
 
 #def run_event_from_file(event_path,pspl_thresh,processors,satellitedir,method='lm'):

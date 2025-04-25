@@ -24,10 +24,10 @@ def main(event_path):
               a1_list=a1_list, pspl_thresh=0, satellitedir=satdir,processors=1)
 if __name__ == "__main__":
     #dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_redo'
-    events = ['event_0_5_606']
-    with multiprocessing.Pool(1) as p:
-        p.map(main,events)
-    #main(events[-1])
+    event = 'event_0_5_606'
+    #with multiprocessing.Pool(1) as p:
+    #    p.map(main,events)
+    main(event)
 
 
 
