@@ -35,6 +35,9 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "src/jasmine/__about__.py"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/jasmine"]
+
 [[tool.hatch.envs.all.matrix]]
 python = ["3.9", "3.10", "3.11", "3.12"]
 
