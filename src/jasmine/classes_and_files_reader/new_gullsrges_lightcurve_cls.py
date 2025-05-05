@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import src.jasmine.classes_and_files_reader.new_gullsrges_reader as grr
+import jasmine.classes_and_files_reader.new_gullsrges_reader as grr
 import pandas as pd
 
 

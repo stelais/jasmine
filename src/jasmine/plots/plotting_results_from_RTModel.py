@@ -2,7 +2,7 @@ from bokeh.models import HoverTool, ColumnDataSource, Whisker, BoxZoomTool, Rese
 from bokeh.plotting import figure
 from bokeh.palettes import Category10
 
-from src.jasmine.classes_and_files_reader.new_gullsrges_reader import whole_columns_lightcurve_reader
+from jasmine.classes_and_files_reader.new_gullsrges_reader import whole_columns_lightcurve_reader
 
 
 def plotting_mass_ratio(q_and_s_summary_df, model_type, x_range=None, y_range=None):

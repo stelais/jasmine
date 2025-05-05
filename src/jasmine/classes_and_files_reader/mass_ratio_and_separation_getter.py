@@ -3,9 +3,9 @@ Called by RTModel_results_reader.py - check that
 """
 import pandas as pd
 
-from src.jasmine.classes_and_files_reader.RTModel_results_reader import list_of_events_from_sample_df
-from src.jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls import LightcurveEventGULLSRGES_NameBased
-from src.jasmine import ModelResults
+from jasmine.classes_and_files_reader.RTModel_results_reader import list_of_events_from_sample_df
+from jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls import LightcurveEventGULLSRGES_NameBased
+from jasmine import ModelResults
 
 
 def get_summary_of_q_s_chi2_per_event(folder_path_, are_there_binary_solutions_):

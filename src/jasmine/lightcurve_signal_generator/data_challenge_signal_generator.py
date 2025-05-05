@@ -1,4 +1,4 @@
-from src.jasmine import LightcurveEventDataChallenge
+from jasmine import LightcurveEventDataChallenge
 import numpy as np
 import VBMicrolensing
 

@@ -1,5 +1,5 @@
 import numpy as np
-from src.jasmine.investigator.astrophysics_formulas import absolute_pi_E_calculator
+from jasmine.investigator.astrophysics_formulas import absolute_pi_E_calculator
 
 def relative_difference_from_true_value_percentage_calculator(true_value, approximated_value):
     percent_error = 100 * np.absolute((true_value - approximated_value) / true_value)

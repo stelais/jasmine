@@ -23,8 +23,8 @@ from pyLIMA.models import FSBL_model
 from pyLIMA.fits import MCMCHDF5_fit,TRF_fit
 from pyLIMA.models import pyLIMA_fancy_parameters
 
-from src.jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
-from src.jasmine.files_organizer import ra_and_dec_conversions as radec
+from jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
+from jasmine.files_organizer import ra_and_dec_conversions as radec
 #from jasmine.files_organizer.new_data_files_for_pylima import rtmodel_data_to_pylima as new_data_files
 #from jasmine.constants import limb_darkening_parameters
 

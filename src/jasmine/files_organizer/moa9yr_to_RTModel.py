@@ -7,7 +7,7 @@ import pandas as pd
 from merida.moa9yr_lightcurve_cls import MOA9yearLightcurve
 from merida.metadata_cls import MOA_Lightcurve_Metadata
 
-from src.jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
+from jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
 
 
 def creating_all_directories_with_files(*,

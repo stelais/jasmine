@@ -4,8 +4,8 @@ You also need to use
 """
 import os
 import pandas as pd
-import src.jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls as lc
-from src.jasmine.constants.limb_darkening_parameters import *
+import jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls as lc
+from jasmine.constants.limb_darkening_parameters import *
 from astropy.coordinates import SkyCoord
 from astropy import units
 

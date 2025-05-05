@@ -1,5 +1,5 @@
 import numpy as np
-from src.jasmine.caustics.caustic_creator_cls import Caustic
+from jasmine.caustics.caustic_creator_cls import Caustic
 
 
 class SourceTrajectoryCausticCrossing:

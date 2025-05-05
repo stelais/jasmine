@@ -10,9 +10,9 @@ from pyLIMA.models import FSBL_model
 from pyLIMA.fits import MCMCHDF5_fit,TRF_fit
 from pyLIMA.models import pyLIMA_fancy_parameters
 
-from src.jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
-from src.jasmine.files_organizer import ra_and_dec_conversions as radec
-from src.jasmine.classes_and_files_reader.best_models_wrap_up import finding_best_rtmodel_fit_name
+from jasmine.classes_and_files_reader import RTModel_results_cls as rtm_results
+from jasmine.files_organizer import ra_and_dec_conversions as radec
+from jasmine.classes_and_files_reader.best_models_wrap_up import finding_best_rtmodel_fit_name
 
 def main(general_path_for_rtmodel_run_,
          pylima_data_folder_,

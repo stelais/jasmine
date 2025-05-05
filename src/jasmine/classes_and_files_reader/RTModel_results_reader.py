@@ -5,8 +5,8 @@ Run this code if you want a quick summary of chi2, q, s, and piE values for the 
 import glob
 import pandas as pd
 
-import src.jasmine.classes_and_files_reader.mass_ratio_and_separation_getter as q_s_getter
-import src.jasmine.classes_and_files_reader.parallax_getter as pie_getter
+import jasmine.classes_and_files_reader.mass_ratio_and_separation_getter as q_s_getter
+import jasmine.classes_and_files_reader.parallax_getter as pie_getter
 
 
 def chi2_getter(filepath_):

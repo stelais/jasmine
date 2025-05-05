@@ -1,4 +1,4 @@
-from src.jasmine import RTModelTemplateForBinaryLightCurve
+from jasmine import RTModelTemplateForBinaryLightCurve
 import numpy as np
 import pandas as pd
 

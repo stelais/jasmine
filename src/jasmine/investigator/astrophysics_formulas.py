@@ -1,5 +1,5 @@
 import numpy as np
-from src.jasmine.constants import general_physics_constants as astroconstants
+from jasmine.constants import general_physics_constants as astroconstants
 
 
 def absolute_pi_E_calculator(pi_E_N_, pi_E_E_,

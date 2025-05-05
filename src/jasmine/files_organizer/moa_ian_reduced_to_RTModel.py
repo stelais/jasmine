@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import merida.moa_rereduced_lightcurve_cls as merida_func
 
-from src.jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
+from jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
 
 
 def creating_rtmodel_event_directory_with_files(*,
