@@ -6,6 +6,7 @@ readme = "README.md"
 license = "MIT"
 authors = [
     { name = "Stela IS", email = "stela.ishitanisilva@nasa.gov" },
+    { name = "Stela IS"},
     { name = "Jon H" },
     { name = "CR" },
     { name = "JASMINE authors" },
