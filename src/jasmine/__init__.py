@@ -1,4 +1,6 @@
 from jasmine.classes_and_files_reader.RTModel_results_cls import ModelResults
+from jasmine.classes_and_files_reader.datachallenge_lightcurve_cls import LightcurveEventDataChallenge
+from jasmine.classes_and_files_reader.rtmodel_template_cls import RTModelTemplateForBinaryLightCurve
 
 __all__ = ['ModelResults', 'LightcurveEventDataChallenge', 'RTModelTemplateForBinaryLightCurve']
 
