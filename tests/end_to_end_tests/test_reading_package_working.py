@@ -1,5 +1,14 @@
-from jasmine.caustics.caustic_creator_cls import Caustic
+from jasmine.files_organizer.ra_and_dec_conversions import convert_to_decimal_degrees, convert_degree_to_hms_dms
 
-caustic_object = Caustic(separation_s=0.8, mass_ratio_q=0.3, number_of_data_points=100)
-type_of_caustics = caustic_object.define_topology()
-assert type_of_caustics == 'resonant'
+def test_ra_conversion():
+    # Answer for the example below
+    # RA,Dec
+    ra = '17:46:48.87'
+    # RA_deg,Dec_deg
+    ra_deg, dec_deg = 266.70362499999993,-33.70191666666667
+
+    print('DECIMAL DEGREE TO HMS DMS')
+    print(f'TRUE VALUES ra: {ra}')
+    convert_ra, convert_dec = convert_degree_to_hms_dms(ra_deg, dec_deg)
+
+    assert convert_ra == ra
