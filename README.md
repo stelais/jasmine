@@ -5,7 +5,8 @@ JASMINE: **J**oint **A**nalysis of **S**imulation for **M**icrolensing **IN**ter
 Installing from github (should be most updated available version):
 ```
 git clone https://github.com/stelais/jasmine.git
-pip install -r requirements.txt
+cd jasmine
+pip install ./
 ```
 
 pip installable as a pip package `jasmine-astro` (usually a bit behind the latest version, but stable):
