@@ -1,5 +1,5 @@
 import pandas as pd
-from src.jasmine import ModelResults
+from jasmine import ModelResults
 
 
 def get_LO_names(*, summary_path_folder_, run_type_, event_unique_id_):
