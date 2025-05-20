@@ -22,7 +22,7 @@ dependencies = [
     "jplephem>=2.22",
     "bokeh==3.4.1",
     "VBMicrolensing>=4.1.0",
-    "moana-pypi",
+    "moana-pypi>=0.2.0.1",
     "RTModel>=2.4.0"
 ]
 
