@@ -221,49 +221,27 @@ def calc_pspl_residuals(pars,args):
     return residuals
 
 
-def filter_by_q(grid_result,pspl_thresh=0):
+def filter_by_q(grid_result,pspl_thresh=-50):
     """
     Finds best initial conditions on grid for each value of q.
-    Does a very simple check for s>1 s<1, but this often will not find an s/1/s degeneracy.
+    Checks s>1 s<1 even though RTModel will do its own offset degeneracy check.
     """
     print('Picking best models for each mass ratio')
     q_list = list(grid_result['log(q)'].unique())
     best_grid_models = []
+    # check for best s>1 s<1 solution for each q
     for q in q_list:
-        #print(q)
-        subgrid = grid_result[grid_result['log(q)'] == q]  # filter results for 1 q value.
-        best_model = subgrid.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
+        subgrid = grid_result[grid_result['log(q)'] == q]
+        subgrid_sge1 = subgrid[grid_result['log(s)'] >=1]# filter results for 1 q value.
+        best_model = subgrid_sge1.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
                      :]  # get best grid model for this q
         if best_model['delta_pspl_chi2'] <= pspl_thresh:
-            best_grid_models.append(best_model)  # add to list of models to be run
-        # Simple check for any s<->1/s degeneracy. Just looks any good solution with s> or < 1
-       #
-         # s = np.exp(best_model['log(s)'])
-        # if s > 1:
-        #     subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) <= 1]  # filter out s>=1 to get s<1 df
-        #     best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-        #                          :]  # check for s<1
-        #     if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-        #         best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-        # elif s < 1:
-        #     subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) >= 1]  # filter out s<=1 to get s>1 df
-        #     best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-        #                          :]  # check for s>1
-        #     if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-        #         best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-        # elif s == float(1):
-        #     check for both s>1 s<1
-            # subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) <= 1]  # filter out s>=1 to get s<1 df
-            # best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-            #                      :]  # check for s<1
-            # if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-            #     best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-            # subgrid_s_degen = subgrid[np.exp(subgrid['log(s)']) >= 1]  # filter out s<=1 to get s>1 df
-            # best_model_s_degen = subgrid_s_degen.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-            #                      :]  # check for s>1
-            # if best_model_s_degen['delta_pspl_chi2'] <= pspl_thresh:
-            #     best_grid_models.append(best_model_s_degen)  # add to list of models to be run
-
+            best_grid_models.append(best_model)
+        subgrid_sl1 = subgrid[grid_result['log(s)'] < 1]  # filter results for 1 q value.
+        best_model = subgrid_sl1.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
+                     :]  # get best grid model for this q
+        if best_model['delta_pspl_chi2'] <= pspl_thresh:
+            best_grid_models.append(best_model)
     best_grid_models = pd.concat(best_grid_models, axis=1,
                                  ignore_index=True).T  # create a DataFrame of the best grid models
     # convert to initial condition input format used by RTModel
@@ -275,7 +253,7 @@ def filter_by_q(grid_result,pspl_thresh=0):
     print('Done')
     return best_grid_models, init_cond
 
-def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,satellitedir,method='lm'):
+def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     # First do the PSPL fit
     pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
@@ -310,7 +288,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
     rtm.config_Reader(otherseasons=0, binning=1000000,renormalize=0)
-    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
+    rtm.config_InitCond(peakthreshold=peak_threshold,modelcategories=modeltypes)
     rtm.Reader()
     rtm.InitCond()
     #Do FSPL fit for comparison
@@ -423,14 +401,13 @@ def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
     plt.show()
     return None
 
-def plot_2L1S_parallax(pars,dataset,event_path,xrange,yrange,evname,satellitedir):
+def plot_2L1S_parallax(pars,dataset,event_path,xrange,yrange,evname):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
     VBMInstance = VBMicrolensing.VBMicrolensing()
     VBMInstance.RelTol = 1e-04
     VBMInstance.Tol = 1e-05
     coordinatefile = f'{event_path}/Data/event.coordinates'
-    VBMInstance.SetObjectCoordinates(coordinatefile, satellitedir)
-    VBMInstance.satellite=1
+    VBMInstance.SetObjectCoordinates(coordinatefile)
     tmin = pars[6]-5*pars[5]
     tmax = pars[6]+5*pars[5]
     if tmin < data[0,-1]:

@@ -2,7 +2,7 @@
 #import sys
 #import tdqm
 import numpy as np
-from jasmine.initial_condition_grid_search.gridfit import *
+from jasmine.initial_condition_grid_search.gridfit_moa_ogle import *
 
 
 def main(event_path):
@@ -23,9 +23,8 @@ def main(event_path):
     dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing'
     event_name=event_path
     event_path = f'{dir6}/{event_path}'
-    satdir = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx/satellitedir'
     run_event(event_path=event_path, dataset_list=dataset_list, grid_s=s_grid, grid_q=q_grid, grid_alpha=alpha_grid, tstar=tstar,
-              a1_list=a1_list, pspl_thresh=0, satellitedir=satdir,processors=1)
+              a1_list=a1_list, pspl_thresh=0,processors=1)
 if __name__ == "__main__":
     #dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_redo'
     event = 'event_0_5_606'
