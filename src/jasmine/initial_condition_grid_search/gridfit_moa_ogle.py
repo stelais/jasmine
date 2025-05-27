@@ -306,12 +306,10 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
     modeltypes = ['PS','LS','LX','LO']
-    rtm.set_satellite_dir(satellitedir=satellitedir)
     peak_threshold = 5
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
-    rtm.set_satellite_dir(satellitedir=satellitedir)
-    rtm.config_Reader(otherseasons=0, binning=1000000)
+    rtm.config_Reader(otherseasons=0, binning=1000000,renormalize=0)
     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
     rtm.Reader()
     rtm.InitCond()
@@ -337,67 +335,6 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     print(f'RTModel time: {time1 - time0}')
     return None
 
-def run_event_rtm_grid(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,satellitedir,method='lm'):
-    """ Wrapper Function to go from pspl_fit to final RTModel runs."""
-    # First do the PSPL fit
-    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
-    if method == 'lm':
-        pspl_chi2 = pspl_results.cost*2
-    else: pspl_chi2 = pspl_results.chi2
-    pspl_pars = pspl_results.x
-    #save pspl fit to a txt file
-    time0 = time.time()
-    grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
-                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
-    time1 = time.time()
-    print(f'ICGS time: {time1-time0}')
-    time0 = time.time()
-    names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
-    grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
-    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
-    #Now run these in RTModel
-    # Have RTModel prints go to log not stdout
-    rtm = RTModel.RTModel()
-    rtm.set_processors(nprocessors=processors)
-    rtm.set_event(event_path)
-    rtm.archive_run()
-    shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
-    #Write some outputs after clearing the directory
-    with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
-        f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
-    np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
-    np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
-    modeltypes = ['PS','LS','LX','LO']
-    rtm.set_satellite_dir(satellitedir=satellitedir)
-    peak_threshold = 5
-    rtm.set_processors(nprocessors=processors)
-    rtm.set_event(event_path)
-    rtm.set_satellite_dir(satellitedir=satellitedir)
-    rtm.config_Reader(otherseasons=0, binning=1000000)
-    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
-    rtm.Reader()
-    rtm.InitCond()
-    #Do FSPL fit for comparison
-    print('Launching PS Fits')
-    rtm.launch_fits('PS')
-    rtm.ModelSelector('PS')
-    print('Launching LS Fits')
-    num_init_cond = init_conds.shape[0]
-    for n in range(num_init_cond):
-        init_cond = list(init_conds[n,:])
-        #launch each fit from the init conds
-        rtm.LevMar(f'LSfit{n:03}',parameters = init_cond)
-    rtm.ModelSelector('LS')
-    print('Launching LX and LO fits')
-    rtm.launch_fits('LX')
-    rtm.ModelSelector('LX')
-    rtm.launch_fits('LO')
-    rtm.ModelSelector('LO')
-    rtm.Finalizer()
-    print('Done')
-    time1 = time.time()
-    print(f'RTModel time: {time1 - time0}')
-    return None
 
 def plot_pspl(pars,dataset,event_path):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
