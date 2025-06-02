@@ -274,10 +274,10 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     #Now run these in RTModel
     # Have RTModel prints go to log not stdout
     rtm = RTModel.RTModel()
-    rtm.set_processors(nprocessors=processors)
-    rtm.set_event(event_path)
-    rtm.archive_run()
-    shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
+    #rtm.set_processors(nprocessors=processors)
+    #rtm.set_event(event_path)
+    #rtm.archive_run()
+    #shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
     with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
