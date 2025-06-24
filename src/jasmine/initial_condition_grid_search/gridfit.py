@@ -104,6 +104,180 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
     return return_list
 
+
+def create_sp_icgs_grid(event_path,pspl_pars,q_grid, alpha_frac, s_frac, n_sep):
+    s_list = []
+    q_list = []
+    alpha_list = []
+
+    # Set pspl parameters from fit.
+    u0 = pspl_pars[0]
+    tE = pspl_pars[1]
+    t0 = pspl_pars[2]
+    # read RTModel peak positions
+    peaks =  read_RTModel_initcond(event_path)
+    d_t0_peaks = np.abs(peaks - t0)
+    ind_t0_peak = np.argmin(d_t0_peaks)
+
+    q = 0.01
+    for index in range(len(peaks)):
+        if index == ind_t0_peak: continue
+        dt = (peaks[index] - t0) / tE;
+        xc0 = math.sqrt(u0 ** 2 + dt ** 2)
+        alpha0 = math.atan2(u0, -dt)
+        xc = xc0;
+        s0 = 0.5 * (math.sqrt(4 + xc * xc) + xc);
+        while (xc < 4 * math.sqrt(q) / (s0 * s0)):
+            q *= 0.1
+            print(q)
+        q_indices = np.where(q_grid <= q)[0]
+
+        for q_index in range(q_grid.shape[0]):  # q_indices:
+            q = q_grid[q_index]
+            # +
+            xc = xc0 + 4 * math.sqrt(q) / (s0 * s0);
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) + xc);
+            s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                 num=n_sep)
+            alpha_center = alpha0;
+            alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac), step=alpha_frac)
+            s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+            s_sublist = s_sublist.flatten()
+            q_sublist = q_sublist.flatten()
+            alpha_sublist = alpha_sublist.flatten()
+            s_list.append(s_sublist)
+            q_list.append(q_sublist)
+            alpha_list.append(alpha_sublist)
+            print(s_center, q, alpha_center)
+            # -
+            xc = xc0 - 4 * math.sqrt(q) / (s0 * s0)
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) + xc)
+            s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                 num=n_sep)
+            alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac), step=alpha_frac)
+            s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+            s_sublist = s_sublist.flatten()
+            q_sublist = q_sublist.flatten()
+            alpha_sublist = alpha_sublist.flatten()
+            s_list.append(s_sublist)
+            q_list.append(q_sublist)
+            alpha_list.append(alpha_sublist)
+            print(s_center, q, alpha_center)
+
+        xc = xc0;
+        s0 = 0.5 * (math.sqrt(4 + xc * xc) - xc);
+        q = 0.01;
+        while (xc < 3 * math.sqrt(3 * q) * s0 * s0 * s0):
+            q *= 0.1;
+        q_indices = np.where(q_grid <= q)[0]
+        for q_index in q_indices:
+            # -sqrt(3q)
+            # +asin
+            q = q_grid[q_index]
+            xc = xc0 - 3 * math.sqrt(3 * q) * s0 * s0 * s0;
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) - xc);
+            print(f's {s_center}')
+            try:
+                alpha_center = alpha0 + math.pi + math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+                # - asin
+                alpha_center = alpha0 + math.pi - math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+            except ValueError:
+                print('Bad sqrt')
+                print(f'Problematic s = {s_center}')
+            # +sqrt(3q)
+            # +asin
+            xc = xc0 + 3 * math.sqrt(3 * q) * s0 * s0 * s0;
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) - xc);
+            try:
+                alpha_center = alpha0 + math.pi + math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+                # -asin
+                alpha_center = alpha0 + math.pi - math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+            except ValueError:
+                print('Bad sqrt')
+                print(f'Problematic s = {s_center}')
+
+    s_list = np.concatenate(s_list)
+    q_list = np.concatenate(q_list)
+    alpha_list = np.concatenate(alpha_list)
+    return s_list, q_list, alpha_list
+
+def grid_fit_pass_meshgrid(event_path, dataset_list, pspl_pars, s, q, alpha, tstar, a1_list, pspl_chi2):
+    """
+        Fit grid of models to determine initial conditions
+        pass preconstructed meshgrid to the grid fit
+    """
+    data_list = []
+    for i in range(len(dataset_list)):
+        data_list.append(np.loadtxt(f'{event_path}/Data/{dataset_list[i]}'))
+    VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.RelTol = 1e-03
+    VBMInstance.Tol=1e-03
+    #print(s.shape[0])
+    grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
+    print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
+    print(f'Checking {s.shape[0]} Models on grid!')
+    for i in range(s.shape[0]):
+        fsblpars = [s[i],q[i],alpha[i],tstar]
+        print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar}')
+        output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
+        grid_results[i,:] = output
+        #if i%5000==0: print(f'{i} Models checked')
+    print('Done checking models!')
+    return grid_results
+
 def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2):
     """
         Fit grid of models to determine initial conditions
@@ -131,7 +305,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     print('Done checking models!')
     return grid_results
 
-def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
+def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm', t0_grid = True):
     """ Find best fitting PSPL Model"""
     data_list = []
     for i in range(len(dataset_list)):
@@ -145,12 +319,32 @@ def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
         p0 = [0.1,10,t0_init]
     else:
         print('Using provided initial conditions')
+        t0_init = p0[-1]
     #magnitude_list = []
     #source_flux_list = []
     #blend_flux_list = []
     if method =='lm':
+        res_arr = []
         print('Using Levenberg-Marquardt')
+        print('Small grid in t0')
+        p0[-1] = t0_init*0.98
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list, len(data_list), VBMInstance]],
+                            method='lm', ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        res_arr.append(res)
+        print('----------')
         res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        res_arr.append(res)
+        print('----------')
+        p0[-1] = t0_init*1.02
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list, len(data_list), VBMInstance]],
+                            method='lm', ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        res_arr.append(res)
+        print('----------')
+        chi2 = []
+        for i in range(3):
+            chi2.append(res_arr[i].cost*2)
+        min_ind = np.argmin(chi2)
+        res = res_arr[min_ind]
     else:
         print('Using some scipy.minimize')
         res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance],method=method)
@@ -221,7 +415,7 @@ def calc_pspl_residuals(pars,args):
     return residuals
 
 
-def filter_by_q(grid_result,pspl_thresh=0):
+def filter_by_q(grid_result,pspl_thresh=-50):
     """
     Finds best initial conditions on grid for each value of q.
     Does a very simple check for s>1 s<1, but this often will not find an s/1/s degeneracy.
@@ -278,7 +472,7 @@ def filter_by_q(grid_result,pspl_thresh=0):
 def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,satellitedir,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     # First do the PSPL fit
-    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
+    pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method, t0_grid=True)
     if method == 'lm':
         pspl_chi2 = pspl_results.cost*2
     else: pspl_chi2 = pspl_results.chi2
@@ -311,7 +505,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
     rtm.set_satellite_dir(satellitedir=satellitedir)
-    rtm.config_Reader(otherseasons=0, binning=1000000)
+    rtm.config_Reader(otherseasons=0, binning=1000000,renormalize=0)
     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
     rtm.Reader()
     rtm.InitCond()
@@ -337,7 +531,17 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     print(f'RTModel time: {time1 - time0}')
     return None
 
-def run_event_rtm_grid(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,satellitedir,method='lm'):
+
+def read_RTModel_initcond(event_path):
+    with open(f'{event_path}/InitCond/InitCondPS.txt', 'r') as f:
+        line1 = f.readline().split(' ')
+        npeaks = int(line1[0])
+        peaks = []
+        for ipeak in range(npeaks):
+            peaks.append(float(f.readline().split(' ')[0]))
+    return np.array(peaks)
+
+def run_event_rtm_grid(event_path,dataset_list,grid_q,tstar,d_alpha, n_alpha, alpha_frac, s_frac, n_sep, a1_list,pspl_thresh,processors,satellitedir,method='lm'):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     # First do the PSPL fit
     pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
@@ -346,27 +550,12 @@ def run_event_rtm_grid(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1
     else: pspl_chi2 = pspl_results.chi2
     pspl_pars = pspl_results.x
     #save pspl fit to a txt file
-    time0 = time.time()
-    grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
-                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
-    time1 = time.time()
-    print(f'ICGS time: {time1-time0}')
-    time0 = time.time()
-    names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
-    grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
-    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
-    #Now run these in RTModel
-    # Have RTModel prints go to log not stdout
+
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
     rtm.archive_run()
     shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
-    #Write some outputs after clearing the directory
-    with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
-        f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
-    np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
-    np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
     modeltypes = ['PS','LS','LX','LO']
     rtm.set_satellite_dir(satellitedir=satellitedir)
     peak_threshold = 5
@@ -377,6 +566,24 @@ def run_event_rtm_grid(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1
     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
     rtm.Reader()
     rtm.InitCond()
+
+    time0 = time.time()
+    s_list, q_list, alpha_list = create_sp_icgs_grid(event_path, pspl_pars,grid_q, alpha_frac, s_frac, n_sep)
+    grid_fit_results = grid_fit_pass_meshgrid(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
+                                s=s_list,q=q_list,alpha=alpha_list,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
+    time1 = time.time()
+    print(f'ICGS time: {time1-time0}')
+    time0 = time.time()
+    names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
+    grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
+    filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
+    #Now run these in RTModel
+    # Have RTModel prints go to log not stdout
+    #Write some outputs after clearing the directory
+    with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
+        f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
+    np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
+    np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
     #Do FSPL fit for comparison
     print('Launching PS Fits')
     rtm.launch_fits('PS')

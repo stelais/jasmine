@@ -253,7 +253,7 @@ def filter_by_q(grid_result,pspl_thresh=-50):
     print('Done')
     return best_grid_models, init_cond
 
-def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm'):
+def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm',archive=True):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     # First do the PSPL fit
     pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
@@ -261,6 +261,13 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
         pspl_chi2 = pspl_results.cost*2
     else: pspl_chi2 = pspl_results.chi2
     pspl_pars = pspl_results.x
+    rtm = RTModel.RTModel()
+    rtm.set_processors(nprocessors=processors)
+    rtm.set_event(event_path)
+    if archive:
+        rtm.archive_run()
+        shutil.rmtree(f'{event_path}/run-0001')
+
     #save pspl fit to a txt file
     time0 = time.time()
     grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
@@ -273,17 +280,13 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
     #Now run these in RTModel
     # Have RTModel prints go to log not stdout
-    rtm = RTModel.RTModel()
-    #rtm.set_processors(nprocessors=processors)
-    #rtm.set_event(event_path)
-    #rtm.archive_run()
-    #shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
+ # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
     with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
-    modeltypes = ['PS','LS','LX','LO']
+    modeltypes = ['PS','BS','BO','LS','LX','LO']
     peak_threshold = 5
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
@@ -295,6 +298,12 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     print('Launching PS Fits')
     rtm.launch_fits('PS')
     rtm.ModelSelector('PS')
+    print('Launching BS Fits')
+    rtm.launch_fits('BS')
+    rtm.ModelSelector('BS')
+    print('Launching BO Fits')
+    rtm.launch_fits('BO')
+    rtm.ModelSelector('BO')
     print('Launching LS Fits')
     num_init_cond = init_conds.shape[0]
     for n in range(num_init_cond):
