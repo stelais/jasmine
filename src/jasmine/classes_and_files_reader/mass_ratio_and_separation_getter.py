@@ -3,7 +3,7 @@ Called by RTModel_results_reader.py - check that
 """
 import pandas as pd
 
-from jasmine.classes_and_files_reader.RTModel_results_reader import list_of_events_from_sample_df
+# from jasmine.classes_and_files_reader.RTModel_results_reader import list_of_events_from_sample_df # commenting it off because there is a circular import
 from jasmine.classes_and_files_reader.new_gullsrges_lightcurve_cls import LightcurveEventGULLSRGES_NameBased
 from jasmine import ModelResults
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # /discover/nobackup/sishitan/orbital_task/RTModel_runs/sample
     type_of_event = 'sample'
     runs_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
-    list_of_events = list_of_events_from_sample_df(runs_path)
+    # list_of_events = list_of_events_from_sample_df(runs_path) # commenting it off because there is a circular import
     # general_path_outputs = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/top10_piE'
     for event in list_of_events:
         folder_path = f'{runs_path}/{event}'
