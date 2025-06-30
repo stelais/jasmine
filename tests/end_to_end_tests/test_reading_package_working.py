@@ -1,4 +1,4 @@
-from jasmine.files_organizer.ra_and_dec_conversions import convert_to_decimal_degrees, convert_degree_to_hms_dms
+from jasmine.files_organizer.ra_and_dec_conversions import convert_degree_to_hms_dms
 
 def test_ra_conversion():
     # Answer for the example below
