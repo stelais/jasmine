@@ -1,13 +1,17 @@
 
 import numpy as np
+import pandas as pd
+from gridfit import *
 
 
 def main(event_path):
     a1_list = [0.33,0.4534,0.2517]
     dataset_list = ['RomanW146sat1.dat','RomanZ087sat2.dat','RomanK213sat3.dat']
-    dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx'
+
+    dir6 = '/Users/jmbrashe/Downloads/events'
     event_name=event_path
     event_path = f'{dir6}/{event_path}'
+    satdir = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx/satellitedir'
 
     #res=pspl_fit(event_path,dataset_list,method='lm')
     #res = np.loadtxt(f'{event_path}/pspl_pars.txt',delimiter=',')
@@ -43,7 +47,7 @@ def main(event_path):
 if __name__ == "__main__":
     #dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_redo'
     events = ['event_0_128_2350','event_0_167_1273','event_0_672_793','event_0_715_873','event_0_874_19','event_0_952_2841']
-    main('event_0_874_19')
+    main('event_0_166_3043')
 
 
 
