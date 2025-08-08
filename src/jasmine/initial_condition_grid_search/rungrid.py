@@ -16,7 +16,7 @@ def main(event_path):
     eps1 = eps1.split(' ')
     eps1_grid = np.array(list(map(float,eps1)))
     q_grid = 1/((1/eps1_grid)-1)
-    tstar=0.15
+    tstar=0.03
     #alpha_grid = np.linspace(-3.15,3.15,316)
     alpha_grid = [4.92]#np.arange(-3.15,3.15,1)
     dir6 = '/Users/jmbrashe/Downloads/events'

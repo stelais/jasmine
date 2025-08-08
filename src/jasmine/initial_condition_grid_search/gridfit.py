@@ -143,14 +143,17 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
         data_list.append(np.loadtxt(f'{event_path}/Data/{dataset_list[i]}'))
     #create VBM instance
     VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.parallaxsystem = 1 # :( :( :( :(
+    VBMInstance.t0_par_fixed = 1
+    VBMInstance.t0_par = 10025.111593759
     #if Parallax set coordinates and read in satellite tables
     if parallax:
-        #VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
-        VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
+        VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
+        #VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
     VBMInstance.RelTol = 1e-03
     VBMInstance.Tol=1e-03
     # I was experimenting with fixing the t0_par to exactly what pyLIMA uses, didn't fix anything.
-    #VBMInstance.t0_par = 10025.111593759
+
     # create parameter meshgrid
     s,q,alpha = np.meshgrid(grid_s,grid_q,grid_alpha)
     s= s.flatten()
@@ -399,7 +402,11 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     time1 = time.time()
     print(f'ICGS time: {time1-time0}')
     time0 = time.time()
-    names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
+    if parallax:
+        names = ['log(s)', 'log(q)', 'u0', 'alpha', 'log(rho)', 'log(tE)', 't0','piEN','piEE', 'fs0', 'fb0', 'fs1', 'fb1', 'fs2',
+                 'fb2', 'chi20', 'chi21', 'chi22', 'chi2sum', 'delta_pspl_chi2']
+    else:
+        names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
     grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
     filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,parallax=parallax,pspl_thresh=pspl_thresh)
     #Now run these in RTModel
