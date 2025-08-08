@@ -39,6 +39,8 @@ def get_chi2(magnitude_list,mag_data_list,error_list,ndatasets):
         chi2 = np.sum(np.power(res,2))
         chi2_list.append(chi2)
     chi2_sum = np.sum(chi2_list)
+
+
     return chi2_list,chi2_sum
 
 def get_residuals(magnitude_list,mag_data_list,error_list,ndatasets):
@@ -56,6 +58,7 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parall
     source_flux_list = []
     blend_flux_list = []
     #loop over bands
+    print(pars)
     for i in range(ndatasets):
         #must update a1 each time
         VBMInstance.a1 = a1_list[i]
@@ -79,6 +82,7 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parall
         blend_flux_list.append(blend_flux)
         sim_magnitudes = -2.5*np.log10(sim_flux)  # model lightcurve magnitudes
         magnitude_list.append(sim_magnitudes)
+
         #
     return magnitude_list,source_flux_list,blend_flux_list
 
@@ -96,9 +100,9 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     # create parameter array for VBM.BinaryLightCurve()
     if parallax:
         pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]),
-                math.log(psplpars[1]), psplpars[2],0.,0.]
+                np.log(psplpars[1]), psplpars[2],psplpars[3],psplpars[4]]
     else:
-        pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]), math.log(psplpars[1]), psplpars[2]]
+        pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]), np.log(psplpars[1]), psplpars[2]]
     # Now go to calculate_magnifications
     # This function will use VBM to get mags, then calculate source + blend fluxes.
     magnitude_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parallax=parallax)
@@ -113,6 +117,20 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     chi2_list,chi2_sum = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
     # return this, it is one line of the grid output file from grid_fit()
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
+
+    fig, ax = plt.subplots()
+    ax.errorbar(data_list[0][:,-1],data_list[0][:,0],yerr = data_list[0][:,1], marker='.', markersize=0.75,
+                linestyle=' ', label='W146')
+    ax.plot(data_list[0][:,-1], magnitude_list[0], zorder=10, label='2L1S Fit', color='black')
+
+    ax.annotate(f'W146 chi2 = {chi2_list[0]}\nTotal chi2 = {chi2_sum}',xy=(0.8,0.9))
+    ax.invert_yaxis()
+    ax.set_xlim(10000, 10050)
+    ax.legend()
+    plt.show()
+    print(' ')
+
+
     return return_list
 
 def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,parallax=False,satellitedir=None):
@@ -127,8 +145,8 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     VBMInstance = VBMicrolensing.VBMicrolensing()
     #if Parallax set coordinates and read in satellite tables
     if parallax:
-        VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
-        #VBMInstance.SetObjectCoordinates('17:50:45.48715951 -30:17:28.97067293')
+        #VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
+        VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
     VBMInstance.RelTol = 1e-03
     VBMInstance.Tol=1e-03
     # I was experimenting with fixing the t0_par to exactly what pyLIMA uses, didn't fix anything.
