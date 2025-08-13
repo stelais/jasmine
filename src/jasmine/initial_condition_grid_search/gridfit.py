@@ -118,17 +118,17 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     # return this, it is one line of the grid output file from grid_fit()
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
 
-    fig, ax = plt.subplots()
-    ax.errorbar(data_list[0][:,-1],data_list[0][:,0],yerr = data_list[0][:,1], marker='.', markersize=0.75,
-                linestyle=' ', label='W146')
-    ax.plot(data_list[0][:,-1], magnitude_list[0], zorder=10, label='2L1S Fit', color='black')
+    #fig, ax = plt.subplots()
+    #ax.errorbar(data_list[0][:,-1],data_list[0][:,0],yerr = data_list[0][:,1], marker='.', markersize=0.75,
+    #            linestyle=' ', label='W146')
+    #ax.plot(data_list[0][:,-1], magnitude_list[0], zorder=10, label='2L1S Fit', color='black')
 
-    ax.annotate(f'W146 chi2 = {chi2_list[0]}\nTotal chi2 = {chi2_sum}',xy=(0.8,0.9))
-    ax.invert_yaxis()
-    ax.set_xlim(10000, 10050)
-    ax.legend()
-    plt.show()
-    print(' ')
+    #ax.annotate(f'W146 chi2 = {chi2_list[0]}\nTotal chi2 = {chi2_sum}',xy=(0.8,0.9))
+    #ax.invert_yaxis()
+    #ax.set_xlim(10000, 10050)
+    #ax.legend()
+    #plt.show()
+    #print(' ')
 
 
     return return_list
@@ -291,12 +291,12 @@ def psplPLX_fit_pyLIMA(event_path,dataset_list,satellitedir):
     your_event.check_event()
     print(telescope_1.bad_data)
 
-    print(telescope_1.bad_data)
+    #print(telescope_1.bad_data)
     pspl_noplx = PSPL_model.PSPLmodel(your_event, parallax=['None',0.0 ])
 
     diffev_fit = DE_fit.DEfit(pspl_noplx, loss_function='chi2')
     diffev_fit.fit_parameters['u0'][1] = [0., 5.]
-    pool = mp.Pool(processes=5)
+    pool = None # mp.Pool(processes=5)
     diffev_fit.fit(computational_pool=pool)
     no_plx_t0 = diffev_fit.fit_results['best_model'][0]
 
@@ -312,9 +312,24 @@ def psplPLX_fit_pyLIMA(event_path,dataset_list,satellitedir):
     gradient_fit.model_parameters_guess = diffev_fit.fit_results['best_model'][0:5]
     gradient_fit.fit()
 
+    #results = []
+    #chi2 = []
 
-    results = gradient_fit.fit_results['best_model']
+    results= gradient_fit.fit_results['best_model']
     chi2 = gradient_fit.fit_results['chi2']
+
+    # Now fit - u0 and add to the results array
+    #diffev_fit.fit_parameters['u0'][1] = [-5., 0.]
+    #diffev_fit.fit(computational_pool=pool)
+    # Do gradient fit to fine tune solution
+    #gradient_fit = TRF_fit.TRFfit(pspl_plx, loss_function='chi2')
+    #gradient_fit.fit_parameters['u0'][1] = [-5., 0.]  # PyLima has a short limit for u0
+
+    #gradient_fit.model_parameters_guess = diffev_fit.fit_results['best_model'][0:5]
+    #gradient_fit.fit()
+
+    #results.append(gradient_fit.fit_results['best_model'])
+    #chi2.append(gradient_fit.fit_results['chi2'])
     return results,chi2
 
 
@@ -414,6 +429,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
+    #if os.path.exists(f'{event_path}/Nature.txt'):
     rtm.archive_run()
     shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
@@ -421,22 +437,32 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
-    modeltypes = ['PS','PX','LS','LX','LO']
+
     if parallax:
-        modeltypes = ['PX', 'LX', 'LO']
+        #nostatic = True
+        modeltypes = ['PS','PX','LX', 'LO']
+    else:
+        #nostatic = False
+        modeltypes = ['PS', 'PX', 'LS', 'LX', 'LO']
+
     rtm.set_satellite_dir(satellitedir=satellitedir)
     peak_threshold = 5
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
     rtm.set_satellite_dir(satellitedir=satellitedir)
     rtm.config_Reader(otherseasons=0, binning=1000000,renormalize=0)
-    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
+    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes),#nostatic=nostatic)
     rtm.Reader()
     rtm.InitCond()
     #Do FSPL fit for comparison
 
 
     if parallax:
+
+        print('Launching PS Fits')
+        rtm.launch_fits('PS')
+        rtm.ModelSelector('PS')
+
         print('Launching PX Fits')
         rtm.launch_fits('PX')
         rtm.ModelSelector('PX')
@@ -518,6 +544,26 @@ def run_event_from_crash(event_path,processors,satellitedir):
     print('Done')
     time1 = time.time()
     print(f'RTModel time: {time1 - time0}')
+    return None
+
+
+
+def update_event(event_path,processors,satellitedir):
+    """ update rtmodel run."""
+
+    rtm = RTModel.RTModel()
+    rtm.set_processors(nprocessors=processors)
+    rtm.set_event(event_path)
+    #if os.path.exists(f'{event_path}/Nature.txt'):
+    rtm.archive_run()
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    peak_threshold = 5
+    rtm.set_processors(nprocessors=processors)
+    rtm.set_event(event_path)
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    rtm.config_Reader(otherseasons=0, binning=1000000,renormalize=0)
+    rtm.config_InitCond(usesatellite=1,onlyupdate=True,oldmodels=10,modelcategories=['PS','LX','LO']),#nostatic=nostatic)
+    rtm.run()
     return None
 
 
