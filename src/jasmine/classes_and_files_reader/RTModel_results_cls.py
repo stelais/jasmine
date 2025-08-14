@@ -51,11 +51,10 @@ class SingleLensSingleSourcePS:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
-
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 4
@@ -72,12 +71,21 @@ class SingleLensSingleSourcePS:
             self.rho = float(parameters[3])
             self.rho_error = float(errors[3])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[4])
-            self.sources = float(parameters[5])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[4])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[5])
+
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
 
 
 @dataclass
@@ -102,11 +110,10 @@ class SingleLensSingleSourceWithParallaxPX:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
-
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 6
@@ -127,12 +134,21 @@ class SingleLensSingleSourceWithParallaxPX:
             self.piEE = float(parameters[5])
             self.piEE_error = float(errors[5])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[6])
-            self.sources = float(parameters[7])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[6])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[7])
+
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
 
 
 @dataclass
@@ -159,10 +175,10 @@ class SingleLensBinarySourceBS:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 7
@@ -185,12 +201,21 @@ class SingleLensBinarySourceBS:
             self.rho1 = float(parameters[6])
             self.rho1_error = float(errors[6])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[7])
-            self.sources = float(parameters[8])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[7])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[8])
+
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
 
 
 @dataclass
@@ -213,11 +238,10 @@ class SingleLensBinarySourceWithXallarapBO:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
-
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 10
@@ -246,12 +270,21 @@ class SingleLensBinarySourceWithXallarapBO:
             self.qs = float(parameters[9])
             self.qs_error = float(errors[9])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[10])
-            self.sources = float(parameters[11])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[10])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[11])
+
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
 
 
 @dataclass
@@ -278,14 +311,14 @@ class BinaryLensSingleSourceLS:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 7
-        with open(file_to_be_read, 'r') as f:
+        with (open(file_to_be_read, 'r') as f):
             lines = f.readlines()
             parameters = lines[0].split(' ')
             errors = lines[1].split(' ')
@@ -304,12 +337,23 @@ class BinaryLensSingleSourceLS:
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[7])
-            self.sources = float(parameters[8])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[7])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[8])
+
+            # blends are odd indices starting from 7
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            # sources are even indices starting from 8
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
 
 
 @dataclass
@@ -340,10 +384,10 @@ class BinaryLensSingleSourceWithParallaxLX:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 9
@@ -370,12 +414,23 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.piEE = float(parameters[8])
             self.piEE_error = float(errors[8])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[9])
-            self.sources = float(parameters[10])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[9])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[10])
+
+            # blends are odd indices starting from 9
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            # sources are even indices starting from 10
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
 
 
 @dataclass
@@ -412,11 +467,10 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
-    blending: float
-    blending_error: float
-    baseline: float
-    baseline_error: float
-
+    blendings: float
+    blendings_error: float
+    baselines: float
+    baselines_error: float
 
     def __init__(self, file_to_be_read):
         self.number_of_parameters = 12
@@ -449,10 +503,18 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.gammaz = float(parameters[11])
             self.gammaz_error = float(errors[11])
             self.chi2 = float(parameters[-1])
-            self.blends = float(parameters[12])
-            self.sources = float(parameters[13])
-            self.blending = self.blends / self.sources
-            self.blending_error = float(errors[12])
-            self.baseline = -2.5 * np.log10(self.blends + self.sources)
-            self.baseline_error = float(errors[13])
 
+            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
+            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
+
+            # TODO CHECK THIS
+            self.blendings = self.blends / (self.sources + 1.e-12 * self.blends)
+            self.blendings_error = np.sqrt((np.array(self.blends_error) / (self.sources + 1.e-12 * self.blends)) ** 2 +
+                                           (np.array(self.blends) * np.array(self.sources_error) /
+                                            (self.sources + 1.e-12 * self.blends) ** 2) ** 2)
+            self.baselines = -2.5 * np.log10(self.blends + self.sources)
+            self.baselines_error = np.sqrt(
+                (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
+                (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
