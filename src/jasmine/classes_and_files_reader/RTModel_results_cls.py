@@ -1,6 +1,113 @@
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
+import os
+import re
+import math
+import warnings
+
+
+class EventResults:
+    """
+    Class to store results (summary) of the RTModel fitting for a single event. It reads the Nature.txt file and also extracts
+    the best fit names of each class of models (PS, PX, BS, BO, LS, LX, LO) and their chi2 values.
+    """
+
+    def __init__(self, event_folder_):
+        """ Initialize the EventResults class with the event folder path."""
+        self.event_folder = event_folder_
+        self.event_name = event_folder_.split('/')[-1]
+
+        # Initialize other attributes that need function below
+        self.ps_best = BestModel()
+        self.px_best = BestModel()
+        self.bs_best = BestModel()
+        self.bo_best = BestModel()
+        self.ls_best = BestModel()
+        self.lx_best = BestModel()
+        self.lo_best = BestModel()
+        self.complete_classification = None
+        self.final_models = None
+        self.number_of_final_models = None
+        self.found_a_planet = None
+        self.found_a_2L1S_solution = None
+
+    def extract_information_from_nature_file(self):
+        """Extracts information from the Nature.txt file in the event folder."""
+        nature_file = os.path.join(self.event_folder, "Nature.txt")
+        with open(nature_file, "r") as f:
+            lines = f.readlines()
+            content = ''.join(lines)
+        # Extract the line starting with 'Successful:'
+        self.complete_classification = ""
+        match = re.search(r"Successful:\s*(.*)", content)
+        if match:
+            self.complete_classification = match.group(1).strip()
+        self.found_a_planet = "Planetary lens" in self.complete_classification
+
+        # Find the start of the 'chisquare model' section
+        try:
+            start = next(i for i, line in enumerate(lines) if "chisquare" in line)
+        except StopIteration:
+            start = None
+        # Extract the best fit names
+        self.final_models = []
+        if start is not None:
+            for line in lines[start + 1:]:
+                parts = line.split()
+                if len(parts) != 2 or not parts[1].endswith(".txt"):
+                    break
+                self.final_models.append(parts[1].replace(".txt", ""))
+        self.number_of_final_models = len(self.final_models)
+
+        # Check if any model starts with 'L'
+        self.found_a_2L1S_solution = any(m.startswith("L") for m in self.final_models)
+
+        # Extract chi2 values
+        # Initialize a dictionary to hold chi2 values
+        self.best_chi2 = {}
+        # Pattern for the models you want
+        chi2_pattern = re.compile(r"^(PS|PX|BS|BO|LS|LX|LO)\s*[:=]\s*([\d.eE+-]+)")
+        for line in lines:
+            match = chi2_pattern.search(line)
+            if match:
+                model, value = match.groups()
+                self.best_chi2[model] = float(value)
+
+
+    def looking_for_the_names_of_best_model_of_each_category(self):
+        """Looks for the names of the best model of each category in the alternative models."""
+        files = [f for f in os.listdir(self.event_folder + '/Models') if f.endswith(".txt")]
+
+        for file_name in files:
+            # Load model and get chi2
+            model_name = file_name.split('.')[0]
+            category = model_name[0:2]  # Get the first two characters to determine the category
+            model_path = os.path.join(self.event_folder + '/Models', file_name)
+            model = ModelResults(model_path)
+            chi2 = model.model_parameters.chi2
+
+            best_object = getattr(self, f"{category.lower()}_best")
+            best_object.chi2 = self.best_chi2.get(category)
+
+            if math.isclose(chi2, self.best_chi2[category], rel_tol=1e-5):
+                best_object.chi2 = chi2
+                best_object.name = model_name
+            elif chi2 < self.best_chi2[category]:
+                warnings.warn(
+                    f"Chi2 for {file_name} ({chi2}) differs from existing {category} self.best_chi2[category] ({self.best_chi2[category]})\n"
+                    f"It probably means that the chi2 value in the Nature.txt file is not the same as the one in the Model folder."
+                )
+                # If the chi2 is better than the current best, update the best object
+                best_object.chi2 = chi2
+                best_object.name = model_name
+
+
+@dataclass
+class BestModel:
+    def __init__(self, name=None, chi2=None):
+        self.name = name
+        self.chi2 = chi2
 
 
 class ModelResults:
@@ -8,25 +115,25 @@ class ModelResults:
         self.model_type = file_to_be_read.split('/')[-1][0:2]
         self.data_challenge_lc_number = data_challenge_lc_number
         if self.model_type == 'PS':
-            self.model_extensive_name = 'Single Lens Single Source (1L1S)'
+            self.model_type_extensive_name = 'Single Lens Single Source (1L1S)'
             self.model_parameters = SingleLensSingleSourcePS(file_to_be_read)
         elif self.model_type == 'PX':
-            self.model_extensive_name = 'Single Lens Single Source with Parallax (1L1S+plx)'
+            self.model_type_extensive_name = 'Single Lens Single Source with Parallax (1L1S+plx)'
             self.model_parameters = SingleLensSingleSourceWithParallaxPX(file_to_be_read)
         elif self.model_type == 'BS':
-            self.model_extensive_name = 'Single Lens Binary Source (1L2S)'
+            self.model_type_extensive_name = 'Single Lens Binary Source (1L2S)'
             self.model_parameters = SingleLensBinarySourceBS(file_to_be_read)
         elif self.model_type == 'BO':
-            self.model_extensive_name = 'Single Lens Binary Source with Xallarap (1L2S+xlp)'
+            self.model_type_extensive_name = 'Single Lens Binary Source with Xallarap (1L2S+xlp)'
             self.model_parameters = SingleLensBinarySourceWithXallarapBO(file_to_be_read)
         elif self.model_type == 'LS':
-            self.model_extensive_name = 'Binary Lens Single Source (2L1S)'
+            self.model_type_extensive_name = 'Binary Lens Single Source (2L1S)'
             self.model_parameters = BinaryLensSingleSourceLS(file_to_be_read)
         elif self.model_type == 'LX':
-            self.model_extensive_name = 'Binary Lens Single Source with Parallax (2L1S+plx)'
+            self.model_type_extensive_name = 'Binary Lens Single Source with Parallax (2L1S+plx)'
             self.model_parameters = BinaryLensSingleSourceWithParallaxLX(file_to_be_read)
         elif self.model_type == 'LO':
-            self.model_extensive_name = 'Binary Lens Single Source with Parallax and Orbital Motion (2L1S+plx+OM)'
+            self.model_type_extensive_name = 'Binary Lens Single Source with Parallax and Orbital Motion (2L1S+plx+OM)'
             self.model_parameters = BinaryLensSingleSourceWithOrbitalMotionLO(file_to_be_read)
         else:
             raise ValueError(f"Model type {self.model_type} not recognized.")
@@ -72,9 +179,11 @@ class SingleLensSingleSourcePS:
             self.rho_error = float(errors[3])
             self.chi2 = float(parameters[-1])
 
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -135,9 +244,11 @@ class SingleLensSingleSourceWithParallaxPX:
             self.piEE_error = float(errors[5])
             self.chi2 = float(parameters[-1])
 
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -202,9 +313,11 @@ class SingleLensBinarySourceBS:
             self.rho1_error = float(errors[6])
             self.chi2 = float(parameters[-1])
 
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -271,9 +384,11 @@ class SingleLensBinarySourceWithXallarapBO:
             self.qs_error = float(errors[9])
             self.chi2 = float(parameters[-1])
 
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -339,10 +454,12 @@ class BinaryLensSingleSourceLS:
             self.chi2 = float(parameters[-1])
 
             # blends are odd indices starting from 7
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
             # sources are even indices starting from 8
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -416,10 +533,12 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.chi2 = float(parameters[-1])
 
             # blends are odd indices starting from 9
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
             # sources are even indices starting from 10
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -504,9 +623,11 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.gammaz_error = float(errors[11])
             self.chi2 = float(parameters[-1])
 
-            self.blends = [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)]
+            self.blends = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters, len(parameters) - 1, 2)])
             self.blends_error = [float(errors[i]) for i in range(self.number_of_parameters, len(errors), 2)]
-            self.sources = [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)]
+            self.sources = np.array(
+                [float(parameters[i]) for i in range(self.number_of_parameters + 1, len(parameters) - 1, 2)])
             self.sources_error = [float(errors[i]) for i in range(self.number_of_parameters + 1, len(errors), 2)]
 
             # TODO CHECK THIS
@@ -518,3 +639,12 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.baselines_error = np.sqrt(
                 (2.5 / np.log(10)) ** 2 * (np.array(self.blends_error) / (self.blends + self.sources)) ** 2 +
                 (2.5 / np.log(10)) ** 2 * (np.array(self.sources_error) / (self.blends + self.sources)) ** 2)
+
+
+if __name__ == "__main__":
+    # Example usage
+    event_folder = "/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/sample_rtmodel_v2.4/event_0_603_3135"
+    event_results = EventResults(event_folder)
+    event_results.extract_information_from_nature_file()
+    event_results.looking_for_the_names_of_best_model_of_each_category()
+    print(event_results)
