@@ -25,11 +25,11 @@ def main(event_path):
     satdir = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx/satellitedir'
     #run_event_from_crash(event_path=event_path,satellitedir=satdir,processors=4)
     run_event(event_path=event_path, dataset_list=dataset_list, grid_s=s_grid, grid_q=q_grid, grid_alpha=alpha_grid, tstar=tstar,
-              a1_list=a1_list, pspl_thresh=-20, satellitedir=satdir,processors=8,parallax=True)
+              a1_list=a1_list, pspl_thresh=-20, satellitedir=satdir,processors=8,parallax=False)
     #update_event(event_path,processors=8,satellitedir=satdir)
 if __name__ == "__main__":
     #dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_redo'
-    event = 'event_0_603_3135_update'
+    event = 'event_0_87_1723_memtest'
     #with multiprocessing.Pool(1) as p:
     #    p.map(main,events)
     main(event)

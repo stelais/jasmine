@@ -58,7 +58,7 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parall
     source_flux_list = []
     blend_flux_list = []
     #loop over bands
-    print(pars)
+    #print(pars)
     for i in range(ndatasets):
         #must update a1 each time
         VBMInstance.a1 = a1_list[i]
@@ -112,7 +112,7 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     for i in range(ndatasets):
         magdata_list.append(data_list[i][:,0])
         magerr_list.append(data_list[i][:,1])
-    print(source_flux_list)
+    #print(source_flux_list)
 
     chi2_list,chi2_sum = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
     # return this, it is one line of the grid output file from grid_fit()
@@ -144,8 +144,8 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     #create VBM instance
     VBMInstance = VBMicrolensing.VBMicrolensing()
     VBMInstance.parallaxsystem = 1 # :( :( :( :(
-    VBMInstance.t0_par_fixed = 1
-    VBMInstance.t0_par = 10025.111593759
+    #VBMInstance.t0_par_fixed = 1
+    #VBMInstance.t0_par = 10025.111593759
     #if Parallax set coordinates and read in satellite tables
     if parallax:
         VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
@@ -175,7 +175,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
         #evaluate model is where chi2 is calculated.
         output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2, parallax=parallax)
         grid_results[i,:] = output
-        print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar} {output[-2]}') # print this to see chi2 of each model.
+        print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar} {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {output[-2]}') # print this to see chi2 of each model.
         #if i%5000==0: print(f'{i} Models checked')
     print('Done checking models!')
     return grid_results
@@ -216,7 +216,7 @@ def pspl_fit_pyLIMA(event_path,dataset_list):
     your_event.telescopes.append(telescope_3)
     your_event.find_survey('RomanW146')
     your_event.check_event()
-    print(telescope_1.bad_data)
+    #print(telescope_1.bad_data)
     pspl = PSPL_model.PSPLmodel(your_event, parallax=['None', 0.0])
 
     diffev_fit = DE_fit.DEfit(pspl, loss_function='chi2')
@@ -289,7 +289,7 @@ def psplPLX_fit_pyLIMA(event_path,dataset_list,satellitedir):
     your_event.telescopes.append(telescope_3)
     your_event.find_survey('RomanW146')
     your_event.check_event()
-    print(telescope_1.bad_data)
+    #print(telescope_1.bad_data)
 
     #print(telescope_1.bad_data)
     pspl_noplx = PSPL_model.PSPLmodel(your_event, parallax=['None',0.0 ])
@@ -412,8 +412,12 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     #save pspl fit to a txt file
     #
     time0 = time.time()
+    #grid_file_name = f'{event_path}/Data/grid_fit.txt'
     grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
                                 grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2,parallax=parallax)
+    print('Grid Array Memory Size in Bytes')
+    print(grid_fit_results.nbytes)
+
     time1 = time.time()
     print(f'ICGS time: {time1-time0}')
     time0 = time.time()
@@ -423,6 +427,8 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     else:
         names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
     grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
+    print('Grid DF memory size in Bytes')
+    print(grid_result_df.memory_usage())
     filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,parallax=parallax,pspl_thresh=pspl_thresh)
     #Now run these in RTModel
     # Have RTModel prints go to log not stdout
@@ -437,6 +443,10 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
+
+    # clear these from memory as they may be up to 100 MB in size.
+    del grid_fit_results
+    del grid_result_df
 
     if parallax:
         #nostatic = True
