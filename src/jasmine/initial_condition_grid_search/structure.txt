@@ -1,0 +1,3 @@
+Starts with run_event() function. Second function from bottom. This takes parameter arrays, ld coefficients, paths to data, etc.
+
+In run_event(), first a PSPL or PSPL+PLX fit is done. Results of this are passed to the function grid_fit()

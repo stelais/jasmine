@@ -10,58 +10,13 @@ import matplotlib.pyplot as plt
 import time
 import logging
 import sys
+import multiprocessing as mp
 
-def minimize_linear_pars(y,err,x):
-    """
-    Exact solution to minimize linear eq chi2
-    """
-    alpha1 = np.sum(x/err**2)
-    alpha2 = np.sum(1/err**2)
-    alpha3 = np.sum(y/err**2)
-    alpha4 = np.sum((x/err)**2)
-    alpha5 = np.sum(x*y/err**2)
-    a = (alpha5*alpha2 - alpha1*alpha3)/(alpha4*alpha2-alpha1**2)
-    b = (alpha4*alpha3 - alpha5*alpha1)/(alpha4*alpha2-alpha1**2)
-    return a,b
-
-def get_chi2(magnitude_list,mag_data_list,error_list,ndatasets):
-    """calculate chi2 for model on each dataset provided"""
-    chi2_list = []
-    for i in range(ndatasets):
-        res = (magnitude_list[i] - mag_data_list[i]) / error_list[i]
-        chi2 = np.sum(np.power(res,2))
-        chi2_list.append(chi2)
-    chi2_sum = np.sum(chi2_list)
-    return chi2_list,chi2_sum
-
-def get_residuals(magnitude_list,mag_data_list,error_list,ndatasets):
-    """calculate chi2 for model on each dataset provided"""
-    residue_list = []
-    for i in range(ndatasets):
-        res = (magnitude_list[i] - mag_data_list[i]) / error_list[i]
-        residue_list.append(res)
-    residues = np.concatenate(residue_list)
-    return residues
-
-def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance):
-    """Calculate LC magnitudes in each passband provided for 2L1S"""
-    magnitude_list = []
-    source_flux_list = []
-    blend_flux_list = []
-    for i in range(ndatasets):
-        VBMInstance.a1 = a1_list[i]
-        data = data_list[i]
-        magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars,data[:,-1])
-        meas_flux = 10**(-0.4*data[:,0])
-        meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
-        #Fix so minimize_linear_parameters uses flux_err not mag_err
-        source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
-        sim_flux = np.array(magnifications)*source_flux+blend_flux
-        source_flux_list.append(source_flux)
-        blend_flux_list.append(blend_flux)
-        sim_magnitudes = -2.5*np.log10(sim_flux)
-        magnitude_list.append(sim_magnitudes)
-    return magnitude_list,source_flux_list,blend_flux_list
+from jasmine.files_organizer import ra_and_dec_conversions as radec
+from pyLIMA import event
+from pyLIMA import telescopes
+from pyLIMA.models import PSPL_model,FSPL_model
+from pyLIMA.fits import DE_fit,TRF_fit
 
 def calculate_magnifications_pspl(pars,data_list,data_mag,ndatasets,VBMInstance):
     """Calculate LC magnitudes in each passband provided for PSPL model"""
@@ -83,7 +38,7 @@ def calculate_magnifications_pspl(pars,data_list,data_mag,ndatasets,VBMInstance)
         magnitude_list.append(sim_magnitudes)
     return magnitude_list,source_flux_list,blend_flux_list
 
-def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2):
+def evaluate_model_plx(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2):
     """ Calculate chi2 for one model in the grid
         fsblpars = [s,q,alpha,tstar]
         psplpars = follows VBMicrolensing format
@@ -93,8 +48,9 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     #blend_flux_list = []
     #source_flux_list = []
     ndatasets = len(data_list)
-    pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]), math.log(psplpars[1]), psplpars[2]]
-    magnitude_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance)
+    pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]),
+            math.log(psplpars[1]), psplpars[2],psplpars[3],psplpars[4]]
+    magnitude_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parallax=True)
     magdata_list = []
     magerr_list = []
     for i in range(ndatasets):
@@ -104,9 +60,159 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
     return return_list
 
-def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2):
+def create_sp_icgs_grid(event_path,pspl_pars,q_grid, alpha_frac, s_frac, n_sep):
+    s_list = []
+    q_list = []
+    alpha_list = []
+
+    # Set pspl parameters from fit.
+    u0 = pspl_pars[0]
+    tE = pspl_pars[1]
+    t0 = pspl_pars[2]
+    # read RTModel peak positions
+    peaks =  read_RTModel_initcond(event_path)
+    d_t0_peaks = np.abs(peaks - t0)
+    ind_t0_peak = np.argmin(d_t0_peaks)
+
+    q = 0.01
+    for index in range(len(peaks)):
+        if index == ind_t0_peak: continue
+        dt = (peaks[index] - t0) / tE;
+        xc0 = math.sqrt(u0 ** 2 + dt ** 2)
+        alpha0 = math.atan2(u0, -dt)
+        xc = xc0;
+        s0 = 0.5 * (math.sqrt(4 + xc * xc) + xc);
+        while (xc < 4 * math.sqrt(q) / (s0 * s0)):
+            q *= 0.1
+            print(q)
+        q_indices = np.where(q_grid <= q)[0]
+
+        for q_index in range(q_grid.shape[0]):  # q_indices:
+            q = q_grid[q_index]
+            # +
+            xc = xc0 + 4 * math.sqrt(q) / (s0 * s0);
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) + xc);
+            s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                 num=n_sep)
+            alpha_center = alpha0;
+            alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac), step=alpha_frac)
+            s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+            s_sublist = s_sublist.flatten()
+            q_sublist = q_sublist.flatten()
+            alpha_sublist = alpha_sublist.flatten()
+            s_list.append(s_sublist)
+            q_list.append(q_sublist)
+            alpha_list.append(alpha_sublist)
+            print(s_center, q, alpha_center)
+            # -
+            xc = xc0 - 4 * math.sqrt(q) / (s0 * s0)
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) + xc)
+            s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                 num=n_sep)
+            alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac), step=alpha_frac)
+            s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+            s_sublist = s_sublist.flatten()
+            q_sublist = q_sublist.flatten()
+            alpha_sublist = alpha_sublist.flatten()
+            s_list.append(s_sublist)
+            q_list.append(q_sublist)
+            alpha_list.append(alpha_sublist)
+            print(s_center, q, alpha_center)
+
+        xc = xc0;
+        s0 = 0.5 * (math.sqrt(4 + xc * xc) - xc);
+        q = 0.01;
+        while (xc < 3 * math.sqrt(3 * q) * s0 * s0 * s0):
+            q *= 0.1;
+        q_indices = np.where(q_grid <= q)[0]
+        for q_index in q_indices:
+            # -sqrt(3q)
+            # +asin
+            q = q_grid[q_index]
+            xc = xc0 - 3 * math.sqrt(3 * q) * s0 * s0 * s0;
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) - xc);
+            print(f's {s_center}')
+            try:
+                alpha_center = alpha0 + math.pi + math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+                # - asin
+                alpha_center = alpha0 + math.pi - math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+            except ValueError:
+                print('Bad sqrt')
+                print(f'Problematic s = {s_center}')
+            # +sqrt(3q)
+            # +asin
+            xc = xc0 + 3 * math.sqrt(3 * q) * s0 * s0 * s0;
+            s_center = 0.5 * (math.sqrt(4 + xc * xc) - xc);
+            try:
+                alpha_center = alpha0 + math.pi + math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+                # -asin
+                alpha_center = alpha0 + math.pi - math.asin(
+                    np.abs(2 * math.sqrt(q * (1 - s_center * s_center)) / s_center) / xc);
+                s_grid = np.logspace(math.log(s_center * (1 - s_frac)), math.log(s_center * (1 + s_frac)), base=np.e,
+                                     num=n_sep)
+                alpha_grid = np.arange(alpha_center * (1 - alpha_frac), alpha_center * (1 + alpha_frac),
+                                       step=alpha_frac)
+                s_sublist, q_sublist, alpha_sublist = np.meshgrid(s_grid, q, alpha_grid)
+                s_sublist = s_sublist.flatten()
+                q_sublist = q_sublist.flatten()
+                alpha_sublist = alpha_sublist.flatten()
+                s_list.append(s_sublist)
+                q_list.append(q_sublist)
+                alpha_list.append(alpha_sublist)
+                print(s_center, q, alpha_center)
+            except ValueError:
+                print('Bad sqrt')
+                print(f'Problematic s = {s_center}')
+
+    s_list = np.concatenate(s_list)
+    q_list = np.concatenate(q_list)
+    alpha_list = np.concatenate(alpha_list)
+    return s_list, q_list, alpha_list
+
+def grid_fit_pass_meshgrid(event_path, dataset_list, pspl_pars, s, q, alpha, tstar, a1_list, pspl_chi2):
     """
         Fit grid of models to determine initial conditions
+        pass preconstructed meshgrid to the grid fit
     """
     data_list = []
     for i in range(len(dataset_list)):
@@ -114,10 +220,6 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     VBMInstance = VBMicrolensing.VBMicrolensing()
     VBMInstance.RelTol = 1e-03
     VBMInstance.Tol=1e-03
-    s,q,alpha = np.meshgrid(grid_s,grid_q,grid_alpha)
-    s= s.flatten()
-    q = q.flatten()
-    alpha = alpha.flatten()
     #print(s.shape[0])
     grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
     print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
@@ -131,7 +233,67 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     print('Done checking models!')
     return grid_results
 
-def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
+
+def fspl_fit_pyLIMA(event_path,dataset_list,a1_list):
+    data_list = []
+    for i in range(len(dataset_list)):
+        data_list.append(np.loadtxt(f'{event_path}/Data/{dataset_list[i]}'))
+        data_list[i] = data_list[i][:, [2, 0, 1]]
+        data_list[i][:,0]+=2450000 # add +2_450_000 for pyLIMA
+    print('Using pyLIMA DE')
+
+    file_path = f'{event_path}/Data/event.coordinates'
+    event_coordinates = pd.read_csv(file_path, delim_whitespace=True, header=None, names=['RA_HMS', 'Dec_DMS'])
+    # Convert RA and Dec to decimal degrees
+    ra_deg = radec.ra_hms_to_deg(event_coordinates['RA_HMS'].iloc[0])
+    dec_deg = radec.dec_dms_to_deg(event_coordinates['Dec_DMS'].iloc[0])
+
+    your_event = event.Event(ra=ra_deg, dec=dec_deg)
+    your_event.name = f'PSPL Fit'
+    telescope_1 = telescopes.Telescope(name='RomanW146',
+                                       camera_filter='W146',
+                                       lightcurve=data_list[0],
+                                       lightcurve_names=['time', 'mag', 'err_mag'],
+                                       lightcurve_units=['JD', 'mag', 'mag'])
+    telescope_2 = telescopes.Telescope(name='RomanZ087',
+                                       camera_filter='Z087',
+                                       lightcurve=data_list[1],
+                                       lightcurve_names=['time', 'mag', 'err_mag'],
+                                       lightcurve_units=['JD', 'mag', 'mag'])
+    telescope_3 = telescopes.Telescope(name='RomanK213',
+                                       camera_filter='K213',
+                                       lightcurve=data_list[2],
+                                       lightcurve_names=['time', 'mag', 'err_mag'],
+                                       lightcurve_units=['JD', 'mag', 'mag'])
+
+    telescope_1.ld_a1 = a1_list[0]
+    telescope_2.ld_a1 = a1_list[1]
+    telescope_3.ld_a1 = a1_list[2]
+
+    your_event.telescopes.append(telescope_1)
+    your_event.telescopes.append(telescope_2)
+    your_event.telescopes.append(telescope_3)
+    your_event.find_survey('RomanW146')
+    your_event.check_event()
+    print(telescope_1.bad_data)
+    fspl = FSPL_model.FSPLmodel(your_event, parallax=['None', 0.0])
+
+    diffev_fit = DE_fit.DEfit(fspl, loss_function='chi2')
+    diffev_fit.fit_parameters['u0'][1] = [0., 5.]
+    diffev_fit.fit()
+    # Do gradient fit to fine tune solution
+    gradient_fit = TRF_fit.TRFfit(fspl, loss_function='chi2')
+    gradient_fit.fit_parameters['u0'][1] = [0, 5.]  # PyLima has a short limit for u0
+
+    gradient_fit.model_parameters_guess = diffev_fit.fit_results['best_model'][0:3]
+    gradient_fit.fit()
+
+
+    results = gradient_fit.fit_results['best_model']
+    chi2 = gradient_fit.fit_results['chi2']
+    return results,chi2
+
+def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm', t0_grid = True):
     """ Find best fitting PSPL Model"""
     data_list = []
     for i in range(len(dataset_list)):
@@ -145,17 +307,40 @@ def pspl_fit(event_path,dataset_list,p0=None,init_ind = 0,method='lm'):
         p0 = [0.1,10,t0_init]
     else:
         print('Using provided initial conditions')
+        t0_init = p0[-1]
     #magnitude_list = []
     #source_flux_list = []
     #blend_flux_list = []
     if method =='lm':
+        res_arr = []
         print('Using Levenberg-Marquardt')
+        print('Small grid in t0')
+        p0[-1] = t0_init - 1
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list, len(data_list), VBMInstance]],
+                            method='lm', ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        res_arr.append(res)
+        print('----------')
+        p0[-1] = t0_init + 0
         res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list,len(data_list),VBMInstance]],method='lm',ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        res_arr.append(res)
+
+        print('----------')
+        p0[-1] = t0_init + 1
+        res = least_squares(fun=calc_pspl_residuals, x0=p0, args=[[data_list, len(data_list), VBMInstance]],
+                            method='lm', ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=50000)
+        res_arr.append(res)
+        print('----------')
+        chi2 = []
+        for i in range(3):
+            chi2.append(res_arr[i].cost*2)
+        min_ind = np.argmin(chi2)
+        res = res_arr[min_ind]
     else:
         print('Using some scipy.minimize')
         res = minimize(calc_pspl_chi2, p0,[data_list,len(data_list),VBMInstance],method=method)
     print('Done Fitting PSPL!')
     return res
+
 
 def calc_pspl_chi2(pars,args):
     """ Objective function to optimize for pspl_fit() """
@@ -219,59 +404,47 @@ def calc_pspl_residuals(pars,args):
     chi2 = np.sum(np.power(residuals,2))
     print(f'chi2: {chi2}')
     return residuals
+def read_RTModel_initcond(event_path):
+    ''' Under Construction'''
+    with open(f'{event_path}/InitCond/InitCondPS.txt', 'r') as f:
+        line1 = f.readline().split(' ')
+        npeaks = int(line1[0])
+        peaks = []
+        for ipeak in range(npeaks):
+            peaks.append(float(f.readline().split(' ')[0]))
+    return np.array(peaks)
 
-
-def filter_by_q(grid_result,pspl_thresh=-50):
-    """
-    Finds best initial conditions on grid for each value of q.
-    Checks s>1 s<1 even though RTModel will do its own offset degeneracy check.
-    """
-    print('Picking best models for each mass ratio')
-    q_list = list(grid_result['log(q)'].unique())
-    best_grid_models = []
-    # check for best s>1 s<1 solution for each q
-    for q in q_list:
-        subgrid = grid_result[grid_result['log(q)'] == q]
-        subgrid_sge1 = subgrid[grid_result['log(s)'] >=1]# filter results for 1 q value.
-        best_model = subgrid_sge1.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-                     :]  # get best grid model for this q
-        if best_model['delta_pspl_chi2'] <= pspl_thresh:
-            best_grid_models.append(best_model)
-        subgrid_sl1 = subgrid[grid_result['log(s)'] < 1]  # filter results for 1 q value.
-        best_model = subgrid_sl1.sort_values('delta_pspl_chi2').reset_index(drop=True).iloc[0,
-                     :]  # get best grid model for this q
-        if best_model['delta_pspl_chi2'] <= pspl_thresh:
-            best_grid_models.append(best_model)
-    best_grid_models = pd.concat(best_grid_models, axis=1,
-                                 ignore_index=True).T  # create a DataFrame of the best grid models
-    # convert to initial condition input format used by RTModel
-    init_cond = best_grid_models.iloc[:, 0:7].values.copy()
-    init_cond[:, 0] = np.exp(init_cond[:, 0])
-    init_cond[:, 1] = np.exp(init_cond[:, 1])
-    init_cond[:, 4] = np.exp(init_cond[:, 4])
-    init_cond[:, 5] = np.exp(init_cond[:, 5])
-    print('Done')
-    return best_grid_models, init_cond
-
-def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,pspl_thresh,processors,method='lm',archive=True):
-    """ Wrapper Function to go from pspl_fit to final RTModel runs."""
+def run_event_rtm_grid(event_path,dataset_list,grid_q,tstar,d_alpha, n_alpha, alpha_frac, s_frac, n_sep, a1_list,pspl_thresh,processors,satellitedir,method='lm'):
+    """ Wrapper Function to go from pspl_fit to final RTModel runs.
+        Runs it from a user provided meshgrid instead of constructing the grid from input arrays"""
     # First do the PSPL fit
     pspl_results = pspl_fit(event_path=event_path,dataset_list=dataset_list,method=method)
     if method == 'lm':
         pspl_chi2 = pspl_results.cost*2
     else: pspl_chi2 = pspl_results.chi2
     pspl_pars = pspl_results.x
+    #save pspl fit to a txt file
+
     rtm = RTModel.RTModel()
     rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
-    if archive:
-        rtm.archive_run()
-        shutil.rmtree(f'{event_path}/run-0001')
+    rtm.archive_run()
+    shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
+    modeltypes = ['PS','LS','LX','LO']
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    peak_threshold = 5
+    rtm.set_processors(nprocessors=processors)
+    rtm.set_event(event_path)
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    rtm.config_Reader(otherseasons=0, binning=1000000)
+    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold,modelcategories=modeltypes)
+    rtm.Reader()
+    rtm.InitCond()
 
-    #save pspl fit to a txt file
     time0 = time.time()
-    grid_fit_results = grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
-                                grid_s=grid_s,grid_q=grid_q,grid_alpha=grid_alpha,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
+    s_list, q_list, alpha_list = create_sp_icgs_grid(event_path, pspl_pars,grid_q, alpha_frac, s_frac, n_sep)
+    grid_fit_results = grid_fit_pass_meshgrid(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
+                                s=s_list,q=q_list,alpha=alpha_list,tstar=tstar,a1_list=a1_list,pspl_chi2=pspl_chi2)
     time1 = time.time()
     print(f'ICGS time: {time1-time0}')
     time0 = time.time()
@@ -280,32 +453,18 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     filtered_df,init_conds = filter_by_q(grid_result=grid_result_df,pspl_thresh=pspl_thresh)
     #Now run these in RTModel
     # Have RTModel prints go to log not stdout
- # have to remove old stuff or it affects the InitConds for everything.
     #Write some outputs after clearing the directory
     with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
-    modeltypes = ['PS','BS','BO','LS','LX','LO']
-    peak_threshold = 5
-    rtm.set_processors(nprocessors=processors)
-    rtm.set_event(event_path)
-    rtm.config_Reader(otherseasons=0, binning=1000000,renormalize=0)
-    rtm.config_InitCond(peakthreshold=peak_threshold,modelcategories=modeltypes)
-    rtm.Reader()
-    rtm.InitCond()
     #Do FSPL fit for comparison
     print('Launching PS Fits')
     rtm.launch_fits('PS')
     rtm.ModelSelector('PS')
-    print('Launching BS Fits')
-    rtm.launch_fits('BS')
-    rtm.ModelSelector('BS')
-    print('Launching BO Fits')
-    rtm.launch_fits('BO')
-    rtm.ModelSelector('BO')
     print('Launching LS Fits')
     num_init_cond = init_conds.shape[0]
+
     for n in range(num_init_cond):
         init_cond = list(init_conds[n,:])
         #launch each fit from the init conds
@@ -321,7 +480,6 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     time1 = time.time()
     print(f'RTModel time: {time1 - time0}')
     return None
-
 
 def plot_pspl(pars,dataset,event_path):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
@@ -410,13 +568,14 @@ def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
     plt.show()
     return None
 
-def plot_2L1S_parallax(pars,dataset,event_path,xrange,yrange,evname):
+def plot_2L1S_parallax(pars,dataset,event_path,xrange,yrange,evname,satellitedir):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
     VBMInstance = VBMicrolensing.VBMicrolensing()
     VBMInstance.RelTol = 1e-04
     VBMInstance.Tol = 1e-05
     coordinatefile = f'{event_path}/Data/event.coordinates'
-    VBMInstance.SetObjectCoordinates(coordinatefile)
+    VBMInstance.SetObjectCoordinates(coordinatefile, satellitedir)
+    VBMInstance.satellite=1
     tmin = pars[6]-5*pars[5]
     tmax = pars[6]+5*pars[5]
     if tmin < data[0,-1]:

@@ -268,7 +268,7 @@ def main(general_path_for_rtmodel_run_,
         # Write header
         writer.writerow(parameters_names)
         # Write data
-        writer.writerow(best_model_ndarray)
+        writer.wrgiterow(best_model_ndarray)
 
     # Write File #2
     print('Saving MCMC chains...')
