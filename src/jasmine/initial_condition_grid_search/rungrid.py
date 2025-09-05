@@ -28,15 +28,16 @@ def main(event_name_, events_directory_path_, satellite_files_directory_path_, a
 if __name__ == "__main__":
     # dir6 = '/Users/jmbrashe/Downloads/events'
     # event = 'event_0_87_1723_memtest'
-    events_directory_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/269_problematic_events_ICGS'
+    run_index = int(sys.argv[1])
+    alpha_grid_density = int(sys.argv[2])
+
+    events_directory_path = f'/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/269_problematic_events_ICGS_{alpha_grid_density}'
     satellite_files_directory_path = '/gpfsm/dnb34/sishitan/orbital_task/data/satellitedir'
 
     table_path = f'{events_directory_path}/problematic_events.txt'
     list_of_events_ = pd.read_table(table_path, header=None)
-    run_index = int(sys.argv[1])
     event_name = list_of_events_.iloc[run_index, 0]
 
-    alpha_grid_density = int(sys.argv[2])
     # with multiprocessing.Pool(1) as p:
     #    p.map(main,events)
     main(event_name, events_directory_path, satellite_files_directory_path, alpha_grid_density)
