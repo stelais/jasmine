@@ -2,15 +2,17 @@ import VBMicrolensing
 import pandas as pd
 import numpy as np
 import math
+
+from MulensModel.pointlens import get_pspl_magnification
 from scipy.optimize import minimize,least_squares
 import RTModel
 import shutil
-import os
-import matplotlib.pyplot as plt
+
 import time
 import logging
 import sys
 import multiprocessing as mp
+import glob
 
 from jasmine.files_organizer import ra_and_dec_conversions as radec
 from pyLIMA import event
@@ -52,9 +54,54 @@ def get_residuals(magnitude_list,mag_data_list,error_list,ndatasets):
     residues = np.concatenate(residue_list)
     return residues
 
+def calc_pspl_chi2(pars,args):
+    """ Objective function to optimize for pspl_fit() """
+    magnitude_list = []
+    source_flux_list = []
+    blend_flux_list = []
+    data_list = args[0]
+    ndatasets = args[1]
+    VBMInstance = args[2]
+    #logger = args[3]
+    pars_log = [np.log(pars[0]),np.log(pars[1]),pars[2]]
+    #logger.info(pars)
+    fluxdata_list = []
+    fluxerr_list = []
+    flux_list = []
+    for i in range(ndatasets):
+        data = data_list[i]
+        magnifications,y1,y2 = VBMInstance.PSPLLightCurve(pars_log,data[:,-1])
+        meas_flux = 10**(-0.4*data[:,0])
+        meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
+        fluxdata_list.append(meas_flux)
+        fluxerr_list.append(meas_flux_err)
+        source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
+        sim_flux = np.array(magnifications)*source_flux+blend_flux
+        flux_list.append(sim_flux)
+        source_flux_list.append(source_flux)
+        blend_flux_list.append(blend_flux)
+        sim_magnitudes = -2.5*np.log10(sim_flux)
+        magnitude_list.append(sim_magnitudes)
+    magdata_list = []
+    magerr_list = []
+    for i in range(ndatasets):
+        magdata_list.append(data_list[i][:,0])
+        magerr_list.append(data_list[i][:,1])
+    chi2_list, chi2 = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
+    chi2_listf, chi2f = get_chi2(flux_list, fluxdata_list, fluxerr_list, ndatasets)
+    print('VBM PSPL chi2 with mag ',chi2)
+    print('VBM PSPL chi2 with flux ', chi2f)
+    print('Source Fluxes ', source_flux_list)
+    print('Blend Fluxes ', blend_flux_list)
+    return chi2
+
+
 def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parallax=False):
     """Calculate LC magnitudes in each passband provided for 2L1S"""
     magnitude_list = []
+    flux_list = []
+    fluxdata_list = []
+    fluxerr_list = []
     source_flux_list = []
     blend_flux_list = []
     #loop over bands
@@ -74,6 +121,8 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parall
         # get the fluxes from measured lightcurve magnitudes
         meas_flux = 10**(-0.4*data[:,0])
         meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
+        fluxdata_list.append(meas_flux)
+        fluxerr_list.append(meas_flux_err)
         #Fix so minimize_linear_parameters uses flux_err not mag_err
         # finds optimal linear source + blend flux parameters
         source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
@@ -82,9 +131,10 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parall
         blend_flux_list.append(blend_flux)
         sim_magnitudes = -2.5*np.log10(sim_flux)  # model lightcurve magnitudes
         magnitude_list.append(sim_magnitudes)
+        flux_list.append(sim_flux)
 
         #
-    return magnitude_list,source_flux_list,blend_flux_list
+    return magnitude_list,flux_list,fluxdata_list,fluxerr_list,source_flux_list,blend_flux_list
 
 
 def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2,parallax=False):
@@ -105,7 +155,7 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
         pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]), np.log(psplpars[1]), psplpars[2]]
     # Now go to calculate_magnifications
     # This function will use VBM to get mags, then calculate source + blend fluxes.
-    magnitude_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parallax=parallax)
+    magnitude_list,flux_list, fluxdata_list,fluxerr_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parallax=parallax)
     # Just the way I passed measured magnitudes to get_chi2(). Maybe I should change it because it's really terrible.
     magdata_list = []
     magerr_list = []
@@ -114,7 +164,7 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
         magerr_list.append(data_list[i][:,1])
     #print(source_flux_list)
 
-    chi2_list,chi2_sum = get_chi2(magnitude_list, magdata_list, magerr_list, ndatasets)
+    chi2_list,chi2_sum = get_chi2(flux_list, fluxdata_list, fluxerr_list, ndatasets)
     # return this, it is one line of the grid output file from grid_fit()
     return_list = np.concatenate((pars, source_flux_list,blend_flux_list, chi2_list,[chi2_sum, chi2_sum-pspl_chi2]))
 
@@ -129,8 +179,6 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     #ax.legend()
     #plt.show()
     #print(' ')
-
-
     return return_list
 
 def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,parallax=False,satellitedir=None):
@@ -150,8 +198,10 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     if parallax:
         VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
         #VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
-    VBMInstance.RelTol = 1e-03
-    VBMInstance.Tol=1e-03
+
+    VBMInstance.Tol=1e-02
+    VBMInstance.RelTol = 0 # leave at 0 for ICGS
+    VBMInstance.minannuli = 2
     # I was experimenting with fixing the t0_par to exactly what pyLIMA uses, didn't fix anything.
 
     # create parameter meshgrid
@@ -162,6 +212,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     #print(s.shape[0])
     # Initialize results array, with size depending on if static
     # N parameters + source+blend fluxes + 3 bands chi2 + total chi2 + delta chi2 = 7/9 + 2+3*len(al_list)
+    #calc_pspl_chi2(pspl_pars,[data_list,3,VBMInstance])
     if parallax:
         grid_results = np.zeros(shape=(s.shape[0], 11 + 3 * len(a1_list)))
         print(f'PSPL + PLX pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]} {pspl_pars[4]}')
@@ -408,6 +459,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     #else: pspl_chi2 = pspl_results.chi2
 
     print(pspl_chi2)
+
     print(pspl_pars)
     #save pspl fit to a txt file
     #
@@ -437,12 +489,16 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     rtm.set_event(event_path)
     #if os.path.exists(f'{event_path}/Nature.txt'):
     rtm.archive_run()
-    shutil.rmtree(f'{event_path}/run-0001') # have to remove old stuff or it affects the InitConds for everything.
+    # have to remove old stuff or it affects the InitConds for everything.
+    archive_list = glob.glob(f'{event_path}/run-*')
+    for archived_run in archive_list:
+        shutil.rmtree(archived_run)
     #Write some outputs after clearing the directory
     with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
+    np.savetxt(f'{event_path}/Data/ICGS_initconds_chi2.txt', filtered_df.values)
 
     # clear these from memory as they may be up to 100 MB in size.
     del grid_fit_results
