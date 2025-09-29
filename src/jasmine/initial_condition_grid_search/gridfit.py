@@ -199,8 +199,8 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
         VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
         #VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
 
-    VBMInstance.Tol=1e-03
-    VBMInstance.RelTol = 1e-03
+    VBMInstance.Tol=1e-02
+    VBMInstance.RelTol = 0 # leave at 0 for ICGS
     VBMInstance.minannuli = 2
     # I was experimenting with fixing the t0_par to exactly what pyLIMA uses, didn't fix anything.
 
