@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import math
 
-from MulensModel.pointlens import get_pspl_magnification
 from scipy.optimize import minimize,least_squares
 import RTModel
 import shutil
@@ -227,7 +226,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
         output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2, parallax=parallax)
         grid_results[i,:] = output
         print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar} {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {output[-2]}') # print this to see chi2 of each model.
-        #if i%5000==0: print(f'{i} Models checked')
+        #if i%10==0: print(f'{i} Models checked')
     print('Done checking models!')
     return grid_results
 
@@ -497,7 +496,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     with open(f'{event_path}/Data/pspl_pars.txt','w') as f:
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
-    np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results)
+    np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results) # change to npy or parquet later
     np.savetxt(f'{event_path}/Data/ICGS_initconds_chi2.txt', filtered_df.values)
 
     # clear these from memory as they may be up to 100 MB in size.
