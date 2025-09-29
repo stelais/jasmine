@@ -96,12 +96,21 @@ def combining_models_with_true_values(true_values_table_path_, models_table_path
 
 
 if __name__ == "__main__":
+    # # Define the paths
+    # # folder_with_runs_path = '/Users/stela/Documents/teste/sample_rtmodel_v2.4/'
+    # folder_with_runs_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/269_problematic_events/'
+    # # model_output_table_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/sample_rtmodel_v2.4/all_models_summary.csv'
+    # model_output_table_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/269_problematic_events/all_models_summary.csv'
+    # # master_file = '/Users/stela/Documents/Scripts/orbital_task/data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'
+    # master_file = '/gpfsm/dnb34/sishitan/orbital_task/data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'
+    # # true_and_rtmodel_fits_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/sample_rtmodel_v2.4/true_and_rtmodel_fits.csv'
+    # true_and_rtmodel_fits_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/269_problematic_events/true_and_rtmodel_fits.csv'
     # Define the paths
-    folder_with_runs_path = '/Users/stela/Documents/teste/sample_rtmodel_v2.4/'
-    model_output_table_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/sample_rtmodel_v2.4/all_models_summary.csv'
-    master_file = '/Users/stela/Documents/Scripts/orbital_task/data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'
-    true_and_rtmodel_fits_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/sample_rtmodel_v2.4/true_and_rtmodel_fits.csv'
-
+    folder_with_runs_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/sample_rtmodel_v3.1/'
+    model_output_table_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/sample_rtmodel_v3.1/all_models_summary.csv'
+    master_file = '/gpfsm/dnb34/sishitan/orbital_task/data/gulls_orbital_motion_extracted/OMPLDG_croin_cassan.sample.csv'
+    true_and_rtmodel_fits_path = '/gpfsm/dnb34/sishitan/orbital_task/RTModel_runs/sample_rtmodel_v3.1/true_and_rtmodel_fits.csv'
+    
     all_event_summaries = loop_through_all_the_folders(folder_with_runs_path)
     model_summary_df = pd.DataFrame(all_event_summaries)
     model_summary_df.to_csv(model_output_table_path, index=False)
