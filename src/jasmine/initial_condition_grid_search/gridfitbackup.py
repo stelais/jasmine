@@ -209,29 +209,6 @@ def create_sp_icgs_grid(event_path,pspl_pars,q_grid, alpha_frac, s_frac, n_sep):
     alpha_list = np.concatenate(alpha_list)
     return s_list, q_list, alpha_list
 
-def grid_fit_pass_meshgrid(event_path, dataset_list, pspl_pars, s, q, alpha, tstar, a1_list, pspl_chi2):
-    """
-        Fit grid of models to determine initial conditions
-        pass preconstructed meshgrid to the grid fit
-    """
-    data_list = []
-    for i in range(len(dataset_list)):
-        data_list.append(np.loadtxt(f'{event_path}/Data/{dataset_list[i]}'))
-    VBMInstance = VBMicrolensing.VBMicrolensing()
-    VBMInstance.RelTol = 1e-03
-    VBMInstance.Tol=1e-03
-    #print(s.shape[0])
-    grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
-    print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
-    print(f'Checking {s.shape[0]} Models on grid!')
-    for i in range(s.shape[0]):
-        fsblpars = [s[i],q[i],alpha[i],tstar]
-        print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar}')
-        output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
-        grid_results[i,:] = output
-        #if i%5000==0: print(f'{i} Models checked')
-    print('Done checking models!')
-    return grid_results
 
 
 def fspl_fit_pyLIMA(event_path,dataset_list,a1_list):
@@ -533,8 +510,6 @@ def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBM
 def plot_2L1S(pars,dataset,event_path,xrange,yrange,evname):
     data = np.loadtxt(f'{event_path}/Data/{dataset}')
     VBMInstance = VBMicrolensing.VBMicrolensing()
-    VBMInstance.RelTol = 1e-04
-    VBMInstance.Tol = 1e-05
     tmag = np.linspace(pars[-1]-5*pars[5],pars[-1]+5*pars[5],80000)
     a1 = 0.33
     magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_plots(pars,[a1],[data],tmag,1,VBMInstance)

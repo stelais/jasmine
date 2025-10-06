@@ -134,7 +134,35 @@ def calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parall
 
         #
     return magnitude_list,flux_list,fluxdata_list,fluxerr_list,source_flux_list,blend_flux_list
-
+def calculate_magnifications_plots(pars,a1_list,data_list,data_mag,ndatasets,VBMInstance,parallax=False):
+    """Calculate LC magnitudes in each passband provided for 2L1S"""
+    magnitude_list = []
+    flux_list = []
+    fluxdata_list = []
+    fluxerr_list = []
+    source_flux_list = []
+    blend_flux_list = []
+    for i in range(ndatasets):
+        VBMInstance.a1 = a1_list[i]
+        data = data_list[i]
+        if parallax == False:
+            magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars,data[:,-1])
+        else:
+            magnifications, y1, y2, sorb = VBMInstance.BinaryLightCurveOrbital(pars, data[:, -1])
+        meas_flux = 10**(-0.4*data[:,0])
+        meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
+        fluxdata_list.append(meas_flux)
+        fluxerr_list.append(meas_flux_err)
+        #Fix so minimize_linear_parameters uses flux_err not mag_err
+        source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
+        magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars, data_mag)
+        sim_flux = np.array(magnifications)*source_flux+blend_flux
+        source_flux_list.append(source_flux)
+        blend_flux_list.append(blend_flux)
+        sim_magnitudes = -2.5*np.log10(sim_flux)
+        magnitude_list.append(sim_magnitudes)
+        flux_list.append(sim_flux)
+    return magnitude_list,flux_list,fluxdata_list,fluxerr_list,source_flux_list,blend_flux_list
 
 def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2,parallax=False):
     """ Calculate chi2 for one model in the grid
@@ -151,7 +179,8 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
         pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]),
                 np.log(psplpars[1]), psplpars[2],psplpars[3],psplpars[4]]
     else:
-        pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]), np.log(psplpars[1]), psplpars[2]]
+        pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2],
+                np.log(fsblpars[3] / psplpars[1]), np.log(psplpars[1]), psplpars[2]]
     # Now go to calculate_magnifications
     # This function will use VBM to get mags, then calculate source + blend fluxes.
     magnitude_list,flux_list, fluxdata_list,fluxerr_list,source_flux_list,blend_flux_list = calculate_magnifications(pars,a1_list,data_list,ndatasets,VBMInstance,parallax=parallax)
@@ -180,7 +209,55 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     #print(' ')
     return return_list
 
-def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,parallax=False,satellitedir=None):
+def grid_fit_pass_meshgrid(event_path, dataset_list, pspl_pars, s, q, alpha, tstar, a1_list, pspl_chi2):
+    """
+        Fit grid of models to determine initial conditions
+        pass preconstructed meshgrid to the grid fit
+    """
+    data_list = []
+    for i in range(len(dataset_list)):
+        data_list.append(np.loadtxt(f'{event_path}/Data/{dataset_list[i]}'))
+    VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.RelTol = 1e-03
+    VBMInstance.Tol=1e-03
+    #print(s.shape[0])
+    grid_results = np.zeros(shape=(s.shape[0],9+3*len(a1_list)))
+    print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
+    print(f'Checking {s.shape[0]} Models on grid!')
+    for i in range(s.shape[0]):
+        fsblpars = [s[i],q[i],alpha[i],tstar]
+        print(f'{i} {s[i]} {q[i]} {alpha[i]} {tstar}')
+        output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2)
+        grid_results[i,:] = output
+        #if i%5000==0: print(f'{i} Models checked')
+    print('Done checking models!')
+    return grid_results
+
+
+def make_grid(grid_s,grid_q,grid_alpha,use_croin=False):
+    if use_croin:
+        print('Implementation in progress')
+    else:
+        s, q, alpha = np.meshgrid(grid_s, grid_q, grid_alpha)
+        s = s.flatten()
+        q = q.flatten()
+        alpha = alpha.flatten()
+    return s,q,alpha
+
+
+# Functions for compressing 3 nested loops into one and recovering the three indices
+def CALCULATE_INDEX(i,j,k,ni,nj,nk):
+    IND = i*nj*nk+j*nk+k
+    return IND
+def RECOVER_INDICES(IND,ni,nj,nk):
+    i = int(IND/(nj*nk))
+    left = IND - (i*nj*nk)
+    j = int(left/nk)
+    k = left - j*nk
+    return i,j,k
+
+
+def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,parallax=False,satellitedir=None,use_croin=False):
     """
         Fit grid of models to determine initial conditions
     """
@@ -202,13 +279,11 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     VBMInstance.RelTol = 0 # leave at 0 for ICGS
     VBMInstance.minannuli = 2
     # I was experimenting with fixing the t0_par to exactly what pyLIMA uses, didn't fix anything.
-
     # create parameter meshgrid
-    s,q,alpha = np.meshgrid(grid_s,grid_q,grid_alpha)
-    s= s.flatten()
-    q = q.flatten()
-    alpha = alpha.flatten()
+    s,q,alpha = make_grid(grid_s,grid_q, grid_alpha, use_croin)
     #print(s.shape[0])
+
+    n_models = grid_q.shape[0]*grid_s.shape[0]*grid_alpha.shape[0]
     # Initialize results array, with size depending on if static
     # N parameters + source+blend fluxes + 3 bands chi2 + total chi2 + delta chi2 = 7/9 + 2+3*len(al_list)
     #calc_pspl_chi2(pspl_pars,[data_list,3,VBMInstance])
@@ -220,6 +295,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
         print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
     print(f'Checking {s.shape[0]} Models on grid!')
     # loop over each model in the grid and call evaluate model
+    # This is where the parallelization must be implemented. So write a function here
     for i in range(s.shape[0]):
         fsblpars = [s[i],q[i],alpha[i],tstar]
         #evaluate model is where chi2 is calculated.
@@ -473,10 +549,11 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     print(f'ICGS time: {time1-time0}')
     time0 = time.time()
     if parallax:
-        names = ['log(s)', 'log(q)', 'u0', 'alpha', 'log(rho)', 'log(tE)', 't0','piEN','piEE', 'fs0', 'fb0', 'fs1', 'fb1', 'fs2',
-                 'fb2', 'chi20', 'chi21', 'chi22', 'chi2sum', 'delta_pspl_chi2']
+        names = ['log(s)', 'log(q)', 'u0', 'alpha', 'log(rho)', 'log(tE)', 't0','piEN','piEE', 'fs0', 'fb0',
+                 'fs1', 'fb1', 'fs2','fb2', 'chi20', 'chi21', 'chi22', 'chi2sum', 'delta_pspl_chi2']
     else:
-        names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0','fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
+        names =  ['log(s)','log(q)','u0','alpha','log(rho)','log(tE)','t0','fs0','fb0',
+                  'fs1','fb1','fs2','fb2','chi20','chi21','chi22','chi2sum','delta_pspl_chi2']
     grid_result_df = pd.DataFrame(grid_fit_results,columns=names)
     print('Grid DF memory size in Bytes')
     print(grid_result_df.memory_usage())

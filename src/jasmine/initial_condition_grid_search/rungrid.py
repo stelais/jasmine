@@ -13,11 +13,15 @@ def main(event_path):
     s = s.split(' ')
     s_grid = list(map(float,s))
     eps1 = '1.e-6 3.16e-6 1.e-5 3.16e-5 1.e-4 3.16e-4 1.e-3 3.16e-3 1.e-2 3.16e-2'
+
+
     eps1 = eps1.split(' ')
     eps1_grid = np.array(list(map(float,eps1)))
     q_grid = 1/((1/eps1_grid)-1)
+
+    print(q_grid.shape,s_grid.shape)
     tstar=0.03
-    alpha_grid = np.linspace(-3.15,3.15,316)
+    alpha_grid = np.linspace(-3.15,3.15,1216)
     #alpha_grid = np.arange(-3.15,3.15,)
     dir6 = '/Users/jmbrashe/Downloads/events'
     event_name=event_path
@@ -28,8 +32,9 @@ def main(event_path):
               a1_list=a1_list, pspl_thresh=-20, satellitedir=satdir,processors=8,parallax=False)
     #update_event(event_path,processors=8,satellitedir=satdir)
 if __name__ == "__main__":
+
     #dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_redo'
-    event = 'event_0_87_1723_memtest'
+    event = 'event_0_87_1723'
     #with multiprocessing.Pool(1) as p:
     #    p.map(main,events)
     main(event)
