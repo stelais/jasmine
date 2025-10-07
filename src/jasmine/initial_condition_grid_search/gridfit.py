@@ -814,7 +814,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     print(f'ICGS time: {time1-time0}')
 
     time0 = time.time()
-    
+
     if parallax:
         names = ['log(s)', 'log(q)', 'u0', 'alpha', 'log(rho)', 'log(tE)', 't0','piEN','piEE', 'chi2sum', 'delta_pspl_chi2']
     else:
