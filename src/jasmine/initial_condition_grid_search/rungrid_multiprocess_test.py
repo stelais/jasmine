@@ -2,6 +2,7 @@
 #import sys
 #import tdqm
 import numpy as np
+import shutil as sh
 from gridfit import *
 import warnings
 warnings.filterwarnings("ignore", message="Polyfit may be poorly conditioned")
@@ -28,11 +29,7 @@ def main(event_path):
     satdir = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_good_plx/satellitedir'
     #run_event_from_crash(event_path=event_path,satellitedir=satdir,processors=4)
     run_event(event_path=event_path, dataset_list=dataset_list, grid_s=s_grid, grid_q=q_grid, grid_alpha=alpha_grid, tstar=tstar,
-              a1_list=a1_list, pspl_thresh=-20, satellitedir=satdir,processors=8,parallax=False)
-
-    #run_event(event_path=event_path+'_single_core', dataset_list=dataset_list, grid_s=s_grid, grid_q=q_grid, grid_alpha=alpha_grid,
-    #          tstar=tstar,
-    #          a1_list=a1_list, pspl_thresh=-20, satellitedir=satdir, processors=1, parallax=False,use_saved_pspl=True)
+              a1_list=a1_list, pspl_thresh=0, satellitedir=satdir,processors=8,parallax=False)
     #update_event(event_path,processors=8,satellitedir=satdir)
 if __name__ == "__main__":
     #dir6 = '/Users/jmbrashe/VBBOrbital/NEWGULLS/6_events_for_testing/levmar_runs_redo'
