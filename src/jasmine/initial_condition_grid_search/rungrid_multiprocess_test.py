@@ -2,7 +2,7 @@
 #import sys
 #import tdqm
 import numpy as np
-from gridfit import *
+from gridfit import run_event
 import warnings
 warnings.filterwarnings("ignore", message="Polyfit may be poorly conditioned")
 
