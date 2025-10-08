@@ -294,7 +294,6 @@ def evaluation_loop(common_parameters,index_list, iteration):
     #if Parallax set coordinates and read in satellite tables
     if parallax:
         VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates',satellitedir)
-        #VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
     VBMInstance.Tol=1e-02
     VBMInstance.RelTol = 0 # leave at 0 for ICGS
     VBMInstance.minannuli = 2
@@ -608,6 +607,149 @@ def filter_by_q(event_path,pspl_pars,pspl_chi2,tstar,grid_q,grid_s,grid_alpha,a1
     print('Done')
     return best_grid_models
 
+def filter_by_q_and_s(event_path,pspl_pars,pspl_chi2,tstar,grid_q,grid_s,grid_alpha,a1_list,parallax=False,pspl_thresh=0):
+    """
+    Finds best initial conditions on grid, with only one model allowed for each q and s.
+    Tries to ensure 4 unique mass ratios, but will stop at 30 total initial conditions.
+
+    """
+    nq = grid_q.shape[0]
+    ns = grid_s.shape[0]
+    na = grid_alpha.shape[0]
+    n_models = nq*ns*na
+    grid_file = np.loadtxt(f'{event_path}/Data/grid_fit.txt')
+    if parallax:
+        best_grid_models = np.zeros(shape=(nq, 11))
+        #print(f'PSPL + PLX pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]} {pspl_pars[4]}')
+    else:
+        best_grid_models = np.zeros(shape=(nq, 9))
+        #print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
+    index = np.arange(0,n_models)
+    chi2 = grid_file[:,1]
+    delta_chi2 = pspl_chi2 - chi2
+    q_index,s_index,alpha_index = RECOVER_INDICES(index,nq,ns,na)
+
+    print(q_index.dtype,s_index.dtype,alpha_index.dtype)
+    q_values = grid_q[q_index]
+    s_values = grid_s[s_index]
+    alpha_values = grid_alpha[alpha_index]
+    print('Picking best models. 1 alpha per q,s pair allowed.')
+    print('Will pick at least 20, unless < 4 unique mass ratios. Then goes up to 30')
+
+    q_unique = list(np.unique(q_values))
+    argsort_chi2_indices = np.argsort(chi2)
+
+    #print(q_unique)
+    delta_chi2_le_0_flag = 0 # flag to set if all models that improve the chi2 have been found.
+    best_grid_model_indices = []
+    best_grid_model_q_s_tuples = []
+    for i in range(n_models):
+        if len(best_grid_model_indices) == 15:
+            break
+        current_index = argsort_chi2_indices[i]
+        s = s_values[current_index]
+        q = q_values[current_index]
+        if (q,s) in best_grid_model_q_s_tuples:
+            continue
+        else:
+            if delta_chi2[current_index] > pspl_thresh:
+                best_grid_model_indices.append(current_index)
+                best_grid_model_q_s_tuples.append((q,s))
+            else:
+                print("No more models improve the chi2 over the pspl!")
+                delta_chi2_le_0_flag = 1
+                break
+
+    if delta_chi2_le_0_flag:
+        print(f'{len(best_grid_model_indices)} initial conditions selected')
+    else:
+        q_in_init_conds = []
+        for qs in best_grid_model_q_s_tuples:
+            q_in_init_conds.append(qs[0])
+        q_in_init_conds = np.unique(q_in_init_conds)
+
+        # if there are already
+        if len(q_in_init_conds)>= 4:
+            start_i = i
+            for i in range(start_i,n_models):
+                if len(best_grid_model_indices) == 20:
+                    break
+                current_index = argsort_chi2_indices[i]
+                s = s_values[current_index]
+                q = q_values[current_index]
+                if (q, s) in best_grid_model_q_s_tuples:
+                    continue
+                else:
+                    if delta_chi2[current_index] > pspl_thresh:
+                        best_grid_model_indices.append(current_index)
+                        best_grid_model_q_s_tuples.append((q, s))
+                    else:
+                        print("No more models improve the chi2 over the pspl!")
+                        delta_chi2_le_0_flag = 1
+                        break
+        else:
+            print("Warning! Only 4 mass ratios in the initial conditions")
+            print("Adding more initial conditions")
+            for j in range(3):
+                if len(q_in_init_conds)<4:
+                    start_i = i
+                    for i in range(start_i,n_models):
+                        if len(best_grid_model_indices) == 15 + (j+1) * 5:
+                            # check again number of unique mass ratios
+                            q_in_init_conds = []
+                            for qs in best_grid_model_q_s_tuples:
+                                q_in_init_conds.append(qs[0])
+                            q_in_init_conds = np.unique(q_in_init_conds)
+                            break
+                        else:
+                            current_index = argsort_chi2_indices[i]
+                            s = s_values[current_index]
+                            q = q_values[current_index]
+                            if ((q, s) in best_grid_model_q_s_tuples) or (q in q_in_init_conds):
+                                continue
+                            else:
+                                if delta_chi2[current_index] > pspl_thresh:
+                                    best_grid_model_indices.append(current_index)
+                                    best_grid_model_q_s_tuples.append((q, s))
+                                else:
+                                    print("No more models improve the chi2 over the pspl!")
+                                    delta_chi2_le_0_flag = 1
+                                    break
+                else:
+                    print(f'{len(best_grid_model_indices)} initial conditions selected')
+                    break
+
+
+
+
+
+
+
+
+
+                    # now reconstruct actual inital condition
+    for i in range(len(best_grid_model_indices)):
+        ind = best_grid_model_indices[i]
+        best_grid_models[i,0] = s_values[ind]
+        best_grid_models[i,1] = q_values[ind]
+        best_grid_models[i,2] = pspl_pars[0]
+        best_grid_models[i, 3] = alpha_values[ind]
+        best_grid_models[i, 4] = tstar/pspl_pars[1]
+        best_grid_models[i, 5] = pspl_pars[1]
+        best_grid_models[i, 6] =pspl_pars[2]
+        if parallax:
+            best_grid_models[i, 7] = pspl_pars[3]
+            best_grid_models[i, 8] = pspl_pars[4]
+            best_grid_models[i, 9] = chi2[ind]
+            best_grid_models[i, 10] = pspl_chi2 - chi2[ind]
+        else:
+            best_grid_models[i, 7] = chi2[ind]
+            best_grid_models[i, 8] = pspl_chi2 - chi2[ind]
+
+    print('Done')
+    return best_grid_models
+
+
 def combine_grid_files(event_path,parallel):
     if parallel:
         data_path = f'{event_path}/Data'
@@ -670,7 +812,7 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     combine_grid_files(event_path, parallel)
     time1 = time.time()
     print(f'ICGS time: {time1-time0}')
-    '''
+
     time0 = time.time()
     
     if parallax:
@@ -762,7 +904,6 @@ def run_event(event_path,dataset_list,grid_s,grid_q,grid_alpha,tstar,a1_list,psp
     print('Done')
     time1 = time.time()
     print(f'RTModel time: {time1 - time0}')
-    '''
     return None
 
 
