@@ -155,6 +155,8 @@ class SingleLensSingleSourcePS:
     t0_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
     rho_error: float
+    t_star: float  # Source crossing time in days
+    t_star_error: float
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
@@ -177,6 +179,8 @@ class SingleLensSingleSourcePS:
             self.t0_error = float(errors[2])
             self.rho = float(parameters[3])
             self.rho_error = float(errors[3])
+            self.t_star = self.rho * self.tE
+            self.t_star_error = np.sqrt(self.tE**2 * self.rho_error**2 + self.rho**2 * self.tE_error**2)
             self.chi2 = float(parameters[-1])
 
             self.blends = np.array(
@@ -208,6 +212,8 @@ class SingleLensSingleSourceWithParallaxPX:
     t0_error: float
     rho: float  # Source radius normalized to Einstein angle (internally fit in logarithmic (ln) scale)
     rho_error: float
+    t_star: float  # Source crossing time in days
+    t_star_error: float
     piEN: float  # Parallax component along North
     piEN_error: float
     piEE: float  # Parallax component along East
@@ -234,6 +240,8 @@ class SingleLensSingleSourceWithParallaxPX:
             self.t0_error = float(errors[2])
             self.rho = float(parameters[3])
             self.rho_error = float(errors[3])
+            self.t_star = self.rho * self.tE
+            self.t_star_error = np.sqrt(self.tE**2 * self.rho_error**2 + self.rho**2 * self.tE_error**2)
             self.piEN = float(parameters[4])
             self.piEN_error = float(errors[4])
             self.piEE = float(parameters[5])
@@ -275,6 +283,8 @@ class SingleLensBinarySourceBS:
     t02_error: float
     rho1: float  # Source radius for the primary source (internally fit in logarithmic (ln) scale)
     rho1_error: float
+    t_star1: float  # Source 1 crossing time in days
+    t_star1_error: float
     chi2: float  # Chi2 value for the fit
     blends: float
     sources: float
@@ -303,6 +313,8 @@ class SingleLensBinarySourceBS:
             self.t02_error = float(errors[5])
             self.rho1 = float(parameters[6])
             self.rho1_error = float(errors[6])
+            self.t_star1 = self.rho1 * self.tE
+            self.t_star1_error = np.sqrt(self.tE**2 * self.rho1_error**2 + self.rho1**2 * self.tE_error**2)
             self.chi2 = float(parameters[-1])
 
             self.blends = np.array(
@@ -330,6 +342,8 @@ class SingleLensBinarySourceWithXallarapBO:
     t01: float  # Closest approach time of the primary source
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
     rho1: float  # Source radius for the primary source (internally fit in logarithmic (ln) scale)
+    t_star1: float  # Source 1 crossing time in days
+    t_star1_error: float
     xi1: float  # Xallarap component parallel to the source velocity
     xi2: float  # Xallarap component orthogonal to the source velocity
     omega: float  # Orbital angular velocity in days^-1
@@ -358,6 +372,8 @@ class SingleLensBinarySourceWithXallarapBO:
             self.tE_error = float(errors[2])
             self.rho1 = float(parameters[3])
             self.rho1_error = float(errors[3])
+            self.t_star1 = self.rho1 * self.tE
+            self.t_star1_error = np.sqrt(self.tE**2 * self.rho1_error**2 + self.rho1**2 * self.tE_error**2)
             self.xi1 = float(parameters[4])
             self.xi1_error = float(errors[4])
             self.xi2 = float(parameters[5])
@@ -405,6 +421,8 @@ class BinaryLensSingleSourceLS:
     rho_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
     tE_error: float
+    t_star: float  # Source crossing time in days
+    t_star_error: float
     t0: float  # Closest approach time in HJD to the barycenter
     t0_error: float
     chi2: float  # Chi2 value for the fit
@@ -433,6 +451,8 @@ class BinaryLensSingleSourceLS:
             self.rho_error = float(errors[4])
             self.tE = float(parameters[5])
             self.tE_error = float(errors[5])
+            self.t_star = self.rho * self.tE
+            self.t_star_error = np.sqrt(self.tE**2 * self.rho_error**2 + self.rho**2 * self.tE_error**2)
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
             self.chi2 = float(parameters[-1])
@@ -472,6 +492,8 @@ class BinaryLensSingleSourceWithParallaxLX:
     rho_error: float
     tE: float  # Einstein time in days (internally fit in logarithmic (ln) scale)
     tE_error: float
+    t_star: float  # Source crossing time in days
+    t_star_error: float
     t0: float  # Closest approach time in HJD to the barycenter
     t0_error: float
     piEN: float  # Parallax component along North
@@ -504,6 +526,8 @@ class BinaryLensSingleSourceWithParallaxLX:
             self.rho_error = float(errors[4])
             self.tE = float(parameters[5])
             self.tE_error = float(errors[5])
+            self.t_star = self.rho * self.tE
+            self.t_star_error = np.sqrt(self.tE**2 * self.rho_error**2 + self.rho**2 * self.tE_error**2)
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
             self.piEN = float(parameters[7])
@@ -549,6 +573,8 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
     tE_error: float
     t0: float  # Closest approach time in HJD to the barycenter
     t0_error: float
+    t_star: float  # Source crossing time in days
+    t_star_error: float
     piEN: float  # Parallax component along North
     piEN_error: float
     piEE: float  # Parallax component along East
@@ -585,6 +611,8 @@ class BinaryLensSingleSourceWithOrbitalMotionLO:
             self.rho_error = float(errors[4])
             self.tE = float(parameters[5])
             self.tE_error = float(errors[5])
+            self.t_star = self.rho * self.tE
+            self.t_star_error = np.sqrt(self.tE**2 * self.rho_error**2 + self.rho**2 * self.tE_error**2)
             self.t0 = float(parameters[6])
             self.t0_error = float(errors[6])
             self.piEN = float(parameters[7])
