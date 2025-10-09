@@ -19,7 +19,7 @@ def main(event_name_, events_directory_path_, satellite_files_directory_path_, a
     event_path = f'{events_directory_path_}/{event_name_}'
     run_event(event_path=event_path, dataset_list=dataset_list, grid_s=s_grid, grid_q=q_grid, grid_alpha=alpha_grid,
               tstar=tstar,
-              a1_list=a1_list, pspl_thresh=-20, satellitedir=satellite_files_directory_path_, processors=8,
+              a1_list=a1_list, pspl_thresh=0, satellitedir=satellite_files_directory_path_, processors=8,
               parallax=False)
 
 
