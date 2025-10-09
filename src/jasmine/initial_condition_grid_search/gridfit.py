@@ -719,14 +719,6 @@ def filter_by_q_and_s(event_path,pspl_pars,pspl_chi2,tstar,grid_q,grid_s,grid_al
                     print(f'{len(best_grid_model_indices)} initial conditions selected')
                     break
 
-
-
-
-
-
-
-
-
                     # now reconstruct actual inital condition
     for i in range(len(best_grid_model_indices)):
         ind = best_grid_model_indices[i]
