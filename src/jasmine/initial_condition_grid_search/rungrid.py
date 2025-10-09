@@ -1,9 +1,7 @@
 import sys
-from gridfit import *
+from gridfit import run_event
 import warnings
-
 warnings.filterwarnings("ignore", message="Polyfit may be poorly conditioned")
-
 
 def main(event_name_, events_directory_path_, satellite_files_directory_path_, alpha_grid_density_):
     """Run a grid search for a given event."""
