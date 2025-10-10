@@ -652,13 +652,7 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
     print(q_index.dtype, s_index.dtype, alpha_index.dtype)
     q_values, s_values, alpha_values = grid_q[q_index], grid_s[s_index], grid_alpha[alpha_index]
 
-    # Initialize best grid models array, with size depending on if static
-    if parallax:
-        best_grid_models = np.zeros(shape=(nq, 11))
-        # print(f'PSPL + PLX pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]} {pspl_pars[4]}')
-    else:
-        best_grid_models = np.zeros(shape=(nq, 9))
-        # print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
+
 
     # Sort all models by chi2 (ascending)
     argsort_chi2_indices = np.argsort(chi2)
@@ -792,6 +786,14 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
     # Step 3: populate best_grid_models array
     # ----------------------
     # now reconstruct actual initial conditions
+    # Initialize best grid models array, with size depending on if static
+    if parallax:
+        best_grid_models = np.zeros(shape=(len(best_grid_model_indices), 11))
+        # print(f'PSPL + PLX pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]} {pspl_pars[4]}')
+    else:
+        best_grid_models = np.zeros(shape=(len(best_grid_model_indices), 9))
+        # print(f'PSPL pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]}')
+
     for best_model_index in range(len(best_grid_model_indices)):
         ind = best_grid_model_indices[best_model_index]
         best_grid_models[best_model_index, 0] = s_values[ind]
@@ -891,8 +893,9 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         names = ['log(s)', 'log(q)', 'u0', 'alpha', 'log(rho)', 'log(tE)', 't0', 'chi2sum', 'delta_pspl_chi2']
 
     combine_grid_files(event_path, parallel=parallel)
-    init_conds = filter_by_q(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha, a1_list,
-                             parallax=False, pspl_thresh=-50)
+    init_conds = filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha, parallax,
+                                   pspl_thresh=0)
+
     filtered_df = pd.DataFrame(init_conds, columns=names)
     # Now run these in RTModel
     # Have RTModel prints go to log not stdout
