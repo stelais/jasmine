@@ -1,5 +1,7 @@
 import sys
 from gridfit import run_event
+import numpy as np
+import pandas as pd
 import warnings
 warnings.filterwarnings("ignore", message="Polyfit may be poorly conditioned")
 
