@@ -23,7 +23,8 @@ dependencies = [
     "bokeh==3.4.1",
     "VBMicrolensing>=4.1.0",
     "moana-astro>=0.3.0",
-    "RTModel>=2.4.0"
+    "RTModel>=2.4.0",
+    "joblib>=1.4.2"
 ]
 
 [project.urls]
