@@ -4,6 +4,7 @@ Run this code if you want a quick summary of chi2, q, s, and piE values for the 
 
 import glob
 import pandas as pd
+import os
 
 import jasmine.classes_and_files_reader.mass_ratio_and_separation_getter as q_s_getter
 import jasmine.classes_and_files_reader.parallax_getter as pie_getter
@@ -65,14 +66,22 @@ def main(general_path_, list_of_events_, parallax=True, mass_ratio_and_separatio
     :param type_of_event_:
     :return:
     """
+    skipped_event = []
     for event in list_of_events_:
         folder_path_ = f'{general_path_}/{event}'
+        models_folder = os.path.join(folder_path_, 'Models')
+        if not os.path.exists(models_folder):
+            print(f"Folder 'Models' doesn't exist for event {event}. Skipping this event.")
+            skipped_event.append(event)
+            continue
         are_there_binary_solutions = models_per_chi2_rank(folder_path_)
         if mass_ratio_and_separation:
             q_s_getter.get_summary_of_q_s_chi2_per_event(folder_path_, are_there_binary_solutions)
         if parallax:
             pie_getter.get_summary_of_parallax_per_event(folder_path_, are_there_binary_solutions)
-
+    # Remove skipped events from the list
+    print('Skipped events:', skipped_event)
+    list_of_events_ = [event for event in list_of_events_ if event not in skipped_event]
     if mass_ratio_and_separation:
         q_s_getter.event_summary_q_s_wrapper(general_path_, list_of_events_, type_of_event_)
     if parallax:
@@ -119,7 +128,8 @@ if __name__ == '__main__':
     # type_of_event = 'sample'
     # type_of_event = '6_events_for_testing'
     # type_of_event = 'icgs_levmar'
-    type_of_event = 'sample_rtmodel_v2.4'
+    # type_of_event = 'sample_rtmodel_v2.4'
+    type_of_event = 'sample_rtmodel_v3.1'
     # runs_path = f'/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/{type_of_event}'
     runs_path = f'/discover/nobackup/sishitan/orbital_task/RTModel_runs/{type_of_event}'
     list_of_events = list_of_events_from_sample_df(runs_path)
