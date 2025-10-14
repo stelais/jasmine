@@ -2,6 +2,8 @@ from bokeh.models import HoverTool, ColumnDataSource, Whisker, BoxZoomTool, Rese
 from bokeh.plotting import figure
 from bokeh.palettes import Category10
 
+import numpy as np
+
 from jasmine.classes_and_files_reader.new_gullsrges_reader import whole_columns_lightcurve_reader
 
 
@@ -14,11 +16,16 @@ def plotting_mass_ratio(q_and_s_summary_df, model_type, x_range=None, y_range=No
         title = f'Mass-ratio - 2L1S+parallax+OM ({model_type})'
     else:
         raise ValueError(f'model_type {model_type} should be LS, LX or LO')
+
+    upper = 10 ** (np.log10(q_and_s_summary_df[f'{model_type}_q']) + q_and_s_summary_df[f'{model_type}_q_err'])
+    lower = 10 ** (np.log10(q_and_s_summary_df[f'{model_type}_q']) - q_and_s_summary_df[f'{model_type}_q_err'])
+    # uper = q_and_s_summary_df[f'{model_type}_q'] + q_and_s_summary_df[f'{model_type}_q_err']
+    # lower = q_and_s_summary_df[f'{model_type}_q'] - q_and_s_summary_df[f'{model_type}_q_err']
     source = ColumnDataSource(data=dict(
         x=q_and_s_summary_df['true_q'],
         y=q_and_s_summary_df[f'{model_type}_q'],
-        upper=q_and_s_summary_df[f'{model_type}_q'] + q_and_s_summary_df[f'{model_type}_q_err'],
-        lower=q_and_s_summary_df[f'{model_type}_q'] - q_and_s_summary_df[f'{model_type}_q_err'],
+        upper=upper,
+        lower=lower,
         desc=q_and_s_summary_df.index,
     ))
     hover = HoverTool(tooltips=[
