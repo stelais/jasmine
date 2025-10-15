@@ -8,6 +8,8 @@ import shutil
 import time
 
 import glob
+
+from defusedxml.lxml import LXML3
 from joblib import Parallel, delayed
 from jasmine.files_organizer import ra_and_dec_conversions as radec
 from pyLIMA import event
@@ -280,7 +282,7 @@ def create_random_indices(event_path, nmodels, ncores):
     end_ind = np.cumsum(nper, dtype=int)[0:ncores]
     for i in range(ncores):
         sub_indices = randomized_index[start_ind[i]:end_ind[i]]
-        np.save(f'{event_path}/Data/sub_index_list_{i}.npy', sub_indices)
+        #np.save(f'{event_path}/Data/sub_index_list_{i}.npy', sub_indices)
     return randomized_index, start_ind, end_ind
 
 
@@ -817,21 +819,51 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
 
 
 def combine_grid_files(event_path, parallel):
+    data_path = f'{event_path}/Data'
     if parallel:
-        data_path = f'{event_path}/Data'
         if os.path.exists(f'{data_path}/grid_fit.txt'):
             os.remove(f'{data_path}/grid_fit.txt')
         grid_files = glob.glob(f'{data_path}/grid_fit*')
         dataframes = []
         for file in grid_files:
+            print(file)
             dataframes.append(pd.read_csv(file, names=['index', 'chi2'], sep='\s+'))
+            os.remove(file) # remove now unecessary file
         grid_fit = pd.concat(dataframes)
         del dataframes
         grid_fit = grid_fit.sort_values('index')
         grid_fit.to_csv(f'{data_path}/grid_fit.txt', index=False, header=False, sep=' ')
     else:
-        shutil.move(f'{event_path}/Data/grid_fit0.txt', f'{event_path}/Data/grid_fit.txt')
+        if os.path.exists(f'{data_path}/grid_fit0.txt'):
+            shutil.move(f'{event_path}/Data/grid_fit0.txt', f'{event_path}/Data/grid_fit.txt')
+        else:
+            raise FileNotFoundError
     return None
+
+def write_inital_conditions(event_path,initial_conditions,parallax=False):
+    ninit_conds = initial_conditions.shape[0]
+    if parallax:
+        model = 'LX'
+    else:
+        model = 'LS'
+    temppath = f'{event_path}/InitCond/InitCond{model}.tmp'
+    initpath = f'{event_path}/InitCond/InitCond{model}.txt'
+    with open(temppath,'w') as tempinit:
+        with open(initpath, 'r') as oldinit:
+            npeaks_nconds = oldinit.readline()
+            npeaks = int(npeaks_nconds.split(' ')[0])
+            npeaks_nconds = f'{npeaks} {ninit_conds}\n'
+            tempinit.write(npeaks_nconds)
+            # write peaks from old file
+            for n in range(npeaks):
+                peak = oldinit.readline()
+                tempinit.write(peak)
+    #now write initial conditons to file
+    initial_conditions[0:7].to_csv(temppath,sep=' ', mode='a')
+    os.remove(initpath)
+    os.rename(temppath,initpath)
+    return None
+
 
 
 def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_thresh, processors,
@@ -880,7 +912,6 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
                               pspl_chi2=pspl_chi2,
                               parallax=parallax, use_croin=False, nprocessors=processors)
 
-    combine_grid_files(event_path, parallel)
     time1 = time.time()
     print(f'ICGS time: {time1 - time0}')
 
@@ -960,11 +991,17 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         rtm.ModelSelector('PX')
 
         print('Launching LS Fits')
+        '''
         num_init_cond = filtered_df.shape[0]
         for n in range(num_init_cond):
             init_cond = list(filtered_df.iloc[n, 0:7])
             # launch each fit from the init conds
             rtm.LevMar(f'LSfit{n:03}', parameters=init_cond)
+        '''
+
+
+
+
         rtm.ModelSelector('LS')
         print('Launching LX fits')
         rtm.launch_fits('LX')
