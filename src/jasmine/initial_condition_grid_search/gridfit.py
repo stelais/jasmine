@@ -4,12 +4,11 @@ import numpy as np
 import RTModel
 import os
 import shutil
-
+import matplotlib.pyplot as plt
 import time
 
 import glob
 
-from defusedxml.lxml import LXML3
 from joblib import Parallel, delayed
 from jasmine.files_organizer import ra_and_dec_conversions as radec
 from pyLIMA import event
@@ -108,7 +107,7 @@ def calculate_magnifications(pars, a1_list, data_list, ndatasets, VBMInstance, p
     # print(pars)
     for i in range(ndatasets):
         # must update a1 each time
-        VBMInstance.a1 = a1_list[i]
+        # VBMInstance.a1 = a1_list[i]
         data = data_list[i]
         if parallax:
             # print(pars)
@@ -196,7 +195,6 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
         magdata_list.append(data_list[i][:, 0])
         magerr_list.append(data_list[i][:, 1])
     # print(source_flux_list)
-
     chi2_list, chi2_sum = get_chi2(flux_list, fluxdata_list, fluxerr_list, ndatasets)
     # return this, it is one line of the grid output file from grid_fit()
     return_list = np.concatenate((pars, source_flux_list, blend_flux_list, chi2_list, [chi2_sum, chi2_sum - pspl_chi2]))
@@ -308,8 +306,8 @@ def evaluation_loop(common_parameters, index_list, iteration):
     # if Parallax set coordinates and read in satellite tables
     if parallax:
         VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates', satellitedir)
-    VBMInstance.Tol = 1e-02
-    VBMInstance.RelTol = 0  # leave at 0 for ICGS
+    VBMInstance.Tol = 1.0e-02
+    VBMInstance.RelTol = 1.0e-03  # leave at 0 for ICGS
     VBMInstance.minannuli = 2
 
     with open(f'{event_path}/Data/grid_fit{iteration}.txt', 'w') as grid_file:
@@ -453,10 +451,12 @@ def pspl_fit_pyLIMA(event_path, dataset_list):
 
     diffev_fit = DE_fit.DEfit(pspl, loss_function='chi2')
     diffev_fit.fit_parameters['u0'][1] = [0., 5.]
+    diffev_fit.fit_parameters['tE'][1] = [0.1, 200.0]
     diffev_fit.fit()
     # Do gradient fit to fine tune solution
     gradient_fit = TRF_fit.TRFfit(pspl, loss_function='chi2')
     gradient_fit.fit_parameters['u0'][1] = [0, 5.]  # PyLima has a short limit for u0
+    gradient_fit.fit_parameters['tE'][1] = [0.1, 200.0]
 
     gradient_fit.model_parameters_guess = diffev_fit.fit_results['best_model'][0:3]
     gradient_fit.fit()
@@ -859,7 +859,7 @@ def write_inital_conditions(event_path,initial_conditions,parallax=False):
                 peak = oldinit.readline()
                 tempinit.write(peak)
     #now write initial conditons to file
-    initial_conditions[0:7].to_csv(temppath,sep=' ', mode='a')
+    initial_conditions.iloc[:,0:7].to_csv(temppath,sep=' ', mode='a',header=False, index = False)
     os.remove(initpath)
     os.rename(temppath,initpath)
     return None
@@ -962,6 +962,8 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold, modelcategories=modeltypes),  # nostatic=nostatic)
     rtm.Reader()
     rtm.InitCond()
+
+
     # Do FSPL fit for comparison
 
     if parallax:
@@ -974,13 +976,12 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         rtm.launch_fits('PX')
         rtm.ModelSelector('PX')
 
+        write_inital_conditions(event_path, filtered_df, parallax=parallax)
         print('Launching LX Fits')
-        num_init_cond = filtered_df.shape[0]
-        for n in range(num_init_cond):
-            init_cond = list(filtered_df.iloc[n, 0:9])
-            # launch each fit from the init conds
-            rtm.LevMar(f'LXfit{n:03}', parameters=init_cond)
-            rtm.ModelSelector('LX')
+        rtm.launch_fits('LX')
+        rtm.ModelSelector('LX')
+
+
     else:
         print('Launching PS Fits')
         rtm.launch_fits('PS')
@@ -990,19 +991,11 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         rtm.launch_fits('PX')
         rtm.ModelSelector('PX')
 
+        write_inital_conditions(event_path, filtered_df, parallax=parallax)
         print('Launching LS Fits')
-        '''
-        num_init_cond = filtered_df.shape[0]
-        for n in range(num_init_cond):
-            init_cond = list(filtered_df.iloc[n, 0:7])
-            # launch each fit from the init conds
-            rtm.LevMar(f'LSfit{n:03}', parameters=init_cond)
-        '''
-
-
-
-
+        rtm.launch_fits('LS')
         rtm.ModelSelector('LS')
+
         print('Launching LX fits')
         rtm.launch_fits('LX')
         rtm.ModelSelector('LX')
@@ -1077,4 +1070,48 @@ def update_event(event_path, processors, satellitedir):
     rtm.config_InitCond(usesatellite=1, onlyupdate=True, oldmodels=10,
                         modelcategories=['PS', 'LX', 'LO']),  # nostatic=nostatic)
     rtm.run()
+    return None
+
+
+def calculate_magnifications_pspl(pars,data_list,data_mag,ndatasets,VBMInstance):
+    """Calculate LC magnitudes in each passband provided for PSPL model"""
+    magnitude_list = []
+    source_flux_list = []
+    blend_flux_list = []
+    pars_log = [np.log(pars[0]), np.log(pars[1]), pars[2]]
+    for i in range(ndatasets):
+        data = data_list[i]
+        magnifications, y1, y2 = VBMInstance.PSPLLightCurve(pars_log,data[:,-1])
+        meas_flux = 10**(-0.4*data[:,0])
+        meas_flux_err = 0.4*np.log(10)*10**(-0.4*data[:,0])*data[:,1]
+        source_flux,blend_flux = minimize_linear_pars(meas_flux,meas_flux_err,magnifications)
+        magnifications, y1, y2 = VBMInstance.PSPLLightCurve(pars_log,data_mag)
+        sim_flux = np.array(magnifications)*source_flux+blend_flux
+        source_flux_list.append(source_flux)
+        blend_flux_list.append(blend_flux)
+        sim_magnitudes = -2.5*np.log10(sim_flux)
+        magnitude_list.append(sim_magnitudes)
+    return magnitude_list,source_flux_list,blend_flux_list
+
+
+def plot_pspl(pars,dataset,event_path):
+    data = np.loadtxt(f'{event_path}/Data/{dataset}')
+    VBMInstance = VBMicrolensing.VBMicrolensing()
+    VBMInstance.RelTol = 1e-03
+    VBMInstance.Tol = 1e-03
+    tmag = np.linspace(data[0,-1],data[-1,-1],80000)
+    magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_pspl(pars,[data],tmag,1,VBMInstance)
+    magnitude = magnitude_list[0]
+    fig, ax = plt.subplots(dpi=100, layout='tight')
+    ax.plot(tmag, magnitude, zorder=10, label='PSPL Fit', color='black')
+    #magnitude_list, source_flux_list, blend_flux_list = calculate_magnifications_pspl([0.6291636,50.20121621,pars[-1]], [data],tmag, 1, VBMInstance)
+    #magnitude = magnitude_list[0]
+    #ax.plot(tmag, magnitude, zorder=10, label='PSPL True', color='red')
+    ax.errorbar(data[:, -1], y=data[:, 0], yerr=data[:, 1], marker='.', markersize=0.75,
+                linestyle=' ', label='W146')
+    ax.set_xlim(pars[-1]-1*pars[1],pars[-1]+1*pars[1])
+    ax.yaxis.set_inverted(True)
+    ax.legend()
+    plt.savefig(f'{event_path}/pspl_plot.png')
+    plt.show()
     return None
