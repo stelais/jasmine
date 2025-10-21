@@ -312,11 +312,14 @@ def evaluation_loop(common_parameters, index_list, iteration):
 
     with open(f'{event_path}/Data/grid_fit{iteration}.txt', 'w') as grid_file:
         for index in index_list:
+            grid_calculation_time_start = time.time() # Adding time track for each model evaluation/calculation
             i, j, k = RECOVER_INDICES(index, grid_q.shape[0], grid_s.shape[0], grid_alpha.shape[0])
             fsblpars = [grid_s[j], grid_q[i], grid_alpha[k], tstar]
             # evaluate model is where chi2 is calculated.
             output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2, parallax=parallax)
-            grid_file.write(f'{index} {output[-2]}\n')
+            grid_calculation_time_end = time.time()
+            grid_calculation_time = grid_calculation_time_end - grid_calculation_time_start
+            grid_file.write(f'{index} {output[-2]} {grid_calculation_time}\n')
 
 
 def grid_fit_parallelized(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,
@@ -396,11 +399,14 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     iter = 0
     with open(f'{event_path}/Data/grid_fit{iter}.txt', 'w') as grid_file:
         for index in range(n_models):
+            grid_calculation_time_start = time.time() # Adding time track for each model evaluation/calculation
             i, j, k = RECOVER_INDICES(index, grid_q.shape[0], grid_s.shape[0], grid_alpha.shape[0])
             fsblpars = [grid_s[j], grid_q[i], grid_alpha[k], tstar]
             # evaluate model is where chi2 is calculated.
             output = evaluate_model(pspl_pars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi2, parallax=parallax)
-            grid_file.write(f'{index} {output[-2]}\n')
+            grid_calculation_time_end = time.time()
+            grid_calculation_time = grid_calculation_time_end - grid_calculation_time_start
+            grid_file.write(f'{index} {output[-2]} {grid_calculation_time}\n')
             # grid_results[i,:] = output
         # print(f'{index} {s[i]} {q[i]} {alpha[i]} {tstar} {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {output[-2]}') # print this to see chi2 of each model.
         # if i%10==0: print(f'{i} Models checked')
@@ -824,7 +830,7 @@ def combine_grid_files(event_path, parallel):
         grid_files = glob.glob(f'{data_path}/grid_fit*')
         dataframes = []
         for file in grid_files:
-            dataframes.append(pd.read_csv(file, names=['index', 'chi2'], sep='\s+'))
+            dataframes.append(pd.read_csv(file, names=['index', 'chi2', 'cal_time'], sep='\s+'))
         grid_fit = pd.concat(dataframes)
         del dataframes
         grid_fit = grid_fit.sort_values('index')
