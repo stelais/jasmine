@@ -677,6 +677,7 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
     for model_index in range(n_models):
         if len(best_grid_model_indices) == number_of_best_models_before_q_filter:
             last_step1_model_index = model_index - 1  # Just to be true to the variable name
+            #print(f'Step 1: {len(best_grid_model_indices)} initial conditions selected')
             break
         current_index = argsort_chi2_indices[model_index]
         q, s = q_values[current_index], s_values[current_index]
@@ -710,6 +711,7 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
             start_i = last_step1_model_index + 1
             for remaining_model_index in range(start_i, n_models):
                 if len(best_grid_model_indices) == number_of_final_models:
+                    #print(f'Step 2: {len(best_grid_model_indices)} initial conditions selected')
                     break
                 current_index = argsort_chi2_indices[remaining_model_index]
                 s = s_values[current_index]
@@ -736,11 +738,13 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
                            (i < (number_of_models_that_are_needed) % (number_of_minimum_unique_q - 1))
                            for i in range(number_of_minimum_unique_q - 1)]
             start_i = last_step1_model_index + 1
+            nstop = number_of_best_models_before_q_filter
             for batch_counter in range(3):
+                nstop += batch_sizes[batch_counter]
+                #print('nstop',nstop)
                 if len(unique_q_in_init_conds) < number_of_minimum_unique_q:
                     for new_model_index in range(start_i, n_models):
-                        if len(best_grid_model_indices) == number_of_best_models_before_q_filter + batch_sizes[
-                            batch_counter]:
+                        if len(best_grid_model_indices) == nstop:
                             # If batch is complete, it recalculates again the number of unique mass ratios
                             # and moves the start index to the last model added and breaks to start a new batch
                             q_in_init_conds = []
@@ -761,18 +765,21 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
                                 if delta_chi2[current_index] > pspl_thresh:
                                     best_grid_model_indices.append(current_index)
                                     best_grid_model_q_s_tuples.append((q, s))
+                                    #print(f'Step 3a: {len(best_grid_model_indices)} initial conditions selected')
                                 else:
                                     print("No more models improve the chi2 over the pspl!")
+                                    #print(f'Step 3b: {len(best_grid_model_indices)} initial conditions selected')
                                     delta_chi2_le_0_flag = 1
                                     break
                 else:
+                    print('Enough unique q added, adding skipped models.')
                     # if minimum unique q is reached, complete with next models from skipped models
                     # calculate how many more models are needed to reach 20
                     number_of_models_needed = number_of_final_models - len(best_grid_model_indices)
                     for skipped_index in range(0, number_of_models_needed):
-                        if len(best_grid_model_indices) == number_of_best_models_before_q_filter + batch_sizes[
-                            batch_counter]:
+                        if len(best_grid_model_indices) == nstop:
                             # If batch is complete, it breaks to start a new batch
+                            #print(f'Step 3c: {len(best_grid_model_indices)} initial conditions selected')
                             break
                         else:
                             if skipped_index < len(saved_skipped_indices):
@@ -785,8 +792,10 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
                             if delta_chi2[current_index] > pspl_thresh:
                                 best_grid_model_indices.append(current_index)
                                 best_grid_model_q_s_tuples.append((q, s))
+                                #print(f'Step 3d: {len(best_grid_model_indices)} initial conditions selected')
                             else:
                                 print("No more models improve the chi2 over the pspl!")
+                                #print(f'Step 3b: {len(best_grid_model_indices)} initial conditions selected')
                                 delta_chi2_le_0_flag = 1
                                 break
 
@@ -833,8 +842,11 @@ def combine_grid_files(event_path, parallel):
         dataframes = []
         for file in grid_files:
             print(file)
+            #print(len(dataframes))
             dataframes.append(pd.read_csv(file, names=['index', 'chi2', 'cal_time'], sep='\s+'))
             os.remove(file) # remove now unecessary file
+            #print(len(dataframes))
+        #print(dataframes)
         grid_fit = pd.concat(dataframes)
         del dataframes
         grid_fit = grid_fit.sort_values('index')
@@ -917,8 +929,6 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
                               grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
                               pspl_chi2=pspl_chi2,
                               parallax=parallax, use_croin=False, nprocessors=processors)
-
-    combine_grid_files(event_path, parallel)
     time1 = time.time()
     print(f'ICGS time: {time1 - time0}')
 
@@ -930,7 +940,6 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     else:
         names = ['log(s)', 'log(q)', 'u0', 'alpha', 'log(rho)', 'log(tE)', 't0', 'chi2sum', 'delta_pspl_chi2']
 
-    filtered_df = pd.DataFrame(init_conds, columns=names)
     # Now run these in RTModel
     # Have RTModel prints go to log not stdout
     rtm = RTModel.RTModel()
@@ -947,11 +956,13 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
     # np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
     # np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results) # change to npy or parquet later
-    np.savetxt(f'{event_path}/Data/ICGS_initconds_chi2.txt', filtered_df.values)
     
     combine_grid_files(event_path, parallel=parallel)
     init_conds = filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha, parallax,
                                    pspl_thresh=0)
+    filtered_df = pd.DataFrame(init_conds, columns=names)
+    np.savetxt(f'{event_path}/Data/ICGS_initconds_chi2.txt', filtered_df.values)
+
     if parallax:
         # nostatic = True
         modeltypes = ['PS', 'PX', 'LX', 'LO']
