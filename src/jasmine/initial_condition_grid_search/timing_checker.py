@@ -52,7 +52,7 @@ def main(list_of_events_path_, log_names_path_, event_run_path_, logfile_base_pa
             'VBM_mean_time_seconds': mean_time,
             'ICGS_time_total_hours': icgs_in_hours,
             'RTModel_time_total_hours': rtmodel_in_hours,
-            'CPU_hours': walltime_used_in_hours,
+            'CPU_hours': f"{walltime_used_in_hours:.3f}",
             # 'ICGS_time_seconds': icgs_times,
             # 'RTModel_time': rtmodel_times,
             # 'Walltime': walltime_used_in_seconds,
