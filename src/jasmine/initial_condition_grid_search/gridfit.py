@@ -8,12 +8,15 @@ import matplotlib.pyplot as plt
 import time
 
 import glob
+
+from autograd.numpy.numpy_jvps import forward_grad_np_std
 from joblib import Parallel, delayed
 from jasmine.files_organizer import ra_and_dec_conversions as radec
 from pyLIMA import event
 from pyLIMA import telescopes
 from pyLIMA.models import PSPL_model
-from pyLIMA.fits import DE_fit, TRF_fit
+from pyLIMA.fits import DE_fit, TRF_fit, LM_fit
+from sympy import false
 
 
 def minimize_linear_pars(y, err, x):
@@ -297,6 +300,7 @@ def evaluation_loop(common_parameters, index_list, iteration):
     data_list = common_parameters[8]
     pspl_chi2 = common_parameters[9]
     parallax = common_parameters[10]
+    gridfile_name = common_parameters[11]
     del common_parameters  # get that outta here
 
     VBMInstance = VBMicrolensing.VBMicrolensing()
@@ -310,7 +314,7 @@ def evaluation_loop(common_parameters, index_list, iteration):
     VBMInstance.RelTol = 1.0e-03  # leave at 0 for ICGS
     VBMInstance.minannuli = 2
 
-    with open(f'{event_path}/Data/grid_fit{iteration}.txt', 'w') as grid_file:
+    with open(f'{event_path}/Data/{gridfile_name}{iteration}.txt', 'w') as grid_file:
         for index in index_list:
             grid_calculation_time_start = time.time() # Adding time track for each model evaluation/calculation
             i, j, k = RECOVER_INDICES(index, grid_q.shape[0], grid_s.shape[0], grid_alpha.shape[0])
@@ -323,7 +327,7 @@ def evaluation_loop(common_parameters, index_list, iteration):
 
 
 def grid_fit_parallelized(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2,
-                          parallax=False, satellitedir=None, use_croin=False, nprocessors=2):
+                          parallax=False, satellitedir=None, use_croin=False, nprocessors=2, gridfile_name = 'grid_fit'):
     """
         Fit grid of models to determine initial conditions
     """
@@ -349,16 +353,18 @@ def grid_fit_parallelized(event_path, dataset_list, pspl_pars, grid_s, grid_q, g
     # This is where the parallelization must be implemented. So write a function here
     # INDICES for grids
     common_parameters = [event_path, satellitedir, grid_q, grid_s, grid_alpha, tstar, pspl_pars, a1_list,
-                         data_list, pspl_chi2, parallax]
+                         data_list, pspl_chi2, parallax,gridfile_name]
     Parallel(n_jobs=nprocessors)(
         delayed(evaluation_loop)(common_parameters, randomized_index[start[iteration]:end[iteration]], iteration) for
         iteration in range(nprocessors))
+    # cleanup by merging all of the grid files into one.
+    combine_grid_files(event_path=event_path, gridfile_name=gridfile_name, parallel=True)
     print('Done checking models!')
     return None
 
 
 def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_chi2, parallax=False,
-             satellitedir=None, use_croin=False):
+             satellitedir=None, use_croin=False,gridfile_name = 'grid_fit'):
     """
         Fit grid of models to determine initial conditions
     """
@@ -374,14 +380,9 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     # if Parallax set coordinates and read in satellite tables
     if parallax:
         VBMInstance.SetObjectCoordinates(f'{event_path}/Data/event.coordinates', satellitedir)
-        # VBMInstance.SetObjectCoordinates('17:55:35.00561287 -30:12:38.19570995')
     VBMInstance.Tol = 1e-02
-    VBMInstance.RelTol = 0  # leave at 0 for ICGS
+    VBMInstance.RelTol = 1e-03
     VBMInstance.minannuli = 2
-    # I was experimenting with fixing the t0_par to exactly what pyLIMA uses, didn't fix anything.
-    # create parameter meshgrid
-    # s,q,alpha = make_grid(grid_s,grid_q, grid_alpha, use_croin)
-    # print(s.shape[0])
     n_models = grid_q.shape[0] * grid_s.shape[0] * grid_alpha.shape[0]
     # Initialize results array, with size depending on if static
     # N parameters + source+blend fluxes + 3 bands chi2 + total chi2 + delta chi2 = 7/9 + 2+3*len(al_list)
@@ -397,7 +398,7 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
     # This is where the parallelization must be implemented. So write a function here
     # INDICES for grids
     iter = 0
-    with open(f'{event_path}/Data/grid_fit{iter}.txt', 'w') as grid_file:
+    with open(f'{event_path}/Data/{gridfile_name}{iter}.txt', 'w') as grid_file:
         for index in range(n_models):
             grid_calculation_time_start = time.time() # Adding time track for each model evaluation/calculation
             i, j, k = RECOVER_INDICES(index, grid_q.shape[0], grid_s.shape[0], grid_alpha.shape[0])
@@ -411,10 +412,102 @@ def grid_fit(event_path, dataset_list, pspl_pars, grid_s, grid_q, grid_alpha, ts
         # print(f'{index} {s[i]} {q[i]} {alpha[i]} {tstar} {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {output[-2]}') # print this to see chi2 of each model.
         # if i%10==0: print(f'{i} Models checked')
     print('Done checking models!')
+    # Cleanup grid files
+    combine_grid_files(event_path=event_path, gridfile_name=gridfile_name, parallel=True)
+
     return None
 
+def single_lens_fit_RTModel(event_path,nprocessors,satellitedir,cleanup_models,parallax,finite_source):
+    rtm = RTModel.RTModel()
+    rtm.set_event(event_path)
+    rtm.archive_run()
+    archive_list = glob.glob(f'{event_path}/run-*')
+    for archived_run in archive_list:
+        shutil.rmtree(archived_run)
+    if finite_source:
+        if parallax:
+            nostatic=True
+            modeltypes = ['PS', 'PX']
+        else:
+            nostatic=False
+            modeltypes = ['PS']
+    else:
+        if parallax:
+            nostatic = True
+            modeltypes = ['PS', 'PX']
+            rtm.parameters_ranges['PS'][3][0] = np.log(1E-6)
+            rtm.parameters_ranges['PS'][3][1] = np.log(2E-6)
 
-# def evaluate_multi()
+            rtm.parameters_ranges['PX'][3][0] = np.log(1E-6)
+            rtm.parameters_ranges['PX'][3][1] = np.log(2E-6)
+        else:
+            nostatic=False
+            modeltypes = ['PS']
+            rtm.parameters_ranges['PS'][3][0] = np.log(1E-6)
+            rtm.parameters_ranges['PS'][3][1] = np.log(2E-6)
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    peak_threshold = 5
+    rtm.set_processors(nprocessors=nprocessors)
+    rtm.set_event(event_path)
+    rtm.set_satellite_dir(satellitedir=satellitedir)
+    rtm.config_Reader(otherseasons=0, binning=1000000, renormalize=0)
+    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold, modelcategories=modeltypes,nostatic=nostatic)
+    rtm.run(cleanup=cleanup_models)
+
+def collect_models(event_path,model_type):
+    if model_type[-1] == 'X':
+        globstr = f'{event_path}/PreModels/PX*.txt'
+        names = ['u0', 'tE', 't0', 'rho', 'piN', 'piE', 'fsa', 'fba', 'fsb', 'fbb', 'fsc', 'fbc', 'chi2']
+    else:
+        globstr = f'{event_path}/PreModels/PS*.txt'
+        names = ['u0', 'tE', 't0', 'rho', 'fsa', 'fba', 'fsb', 'fbb', 'fsc', 'fbc', 'chi2']
+
+    files = glob.glob(globstr)
+    model_dataframes = []
+    for file in files:
+        model_dataframes.append(pd.read_csv(file, names=names, nrows=1, skiprows=1, sep='\s+'))
+    df = pd.concat(model_dataframes).reset_index(drop=True)
+    df = df[df['chi2'] > 0]
+    if model_type[-1] == 'X':
+        df_neg = df[df['u0'] < 0]
+        df_pos = df[df['u0'] >= 0]
+        min_ind = np.argmin(df_neg['chi2'])
+        neg_model = df_neg.iloc[min_ind:min_ind+1, [0, 1, 2, 3, 4, 5, -1]]
+        min_ind = np.argmin(df_pos['chi2'])
+        pos_model = df_pos.iloc[min_ind:min_ind+1, [0, 1, 2, 3, 4, 5, -1]]
+        models = pd.concat([pos_model, neg_model], axis=0)
+    else:
+        min_ind = np.argmin(df['chi2'])
+        models = df.copy().iloc[min_ind:min_ind+1, [0, 1, 2, 3, -1]]
+        print(type(models))
+    models['model_type'] = model_type
+    return models
+
+
+def fit_single_lens_models(event_path, nprocessors, satellitedir, modeltypes=['PSPL']):
+    allowed_models = ['PSPL','PSPL_PLX','FSPL','FSPL_PLX']
+    output_path = f'{event_path}/Data/pspl_fits.txt'
+    with open(output_path,'w') as f:
+        f.write('u0 tE t0 rho piEN piEE model_type\n')
+    for model in modeltypes:
+        if model not in allowed_models:
+            raise NameError(f'{model} is not a valid model type.')
+        #check finite source
+        if model[0] =='P':
+            finite_source_ = False
+        elif model[0] == 'F':
+            finite_source_ = True
+        #check parallax
+        if model[-1] == 'L':
+            parallax_ = false
+        elif model[-1] == 'X':
+            parallax_ = True
+        print(f'Fitting {model}!')
+        single_lens_fit_RTModel(event_path=event_path, nprocessors=nprocessors,satellitedir=satellitedir,cleanup_models=False,parallax=parallax_,finite_source=finite_source_)
+        best_models = collect_models(event_path=event_path, model_type=model)
+        best_models.to_csv(output_path,mode='a',sep=' ',index=False,header=False)
+    print('Done!')
+
 
 def pspl_fit_pyLIMA(event_path, dataset_list):
     data_list = []
@@ -455,21 +548,24 @@ def pspl_fit_pyLIMA(event_path, dataset_list):
     # print(telescope_1.bad_data)
     pspl = PSPL_model.PSPLmodel(your_event, parallax=['None', 0.0])
 
-    diffev_fit = DE_fit.DEfit(pspl, loss_function='chi2')
+    diffev_fit = DE_fit.DEfit(pspl, loss_function='chi2',DE_population_size=10)
     diffev_fit.fit_parameters['u0'][1] = [0., 5.]
     diffev_fit.fit_parameters['tE'][1] = [0.1, 200.0]
+    #diffev_fit.fit_parameters['t0'][1] = [2.45700e+06, ]
     diffev_fit.fit()
+    #diffev_fit.print_fit_results()
+    #print('LM Fit')
     # Do gradient fit to fine tune solution
     gradient_fit = TRF_fit.TRFfit(pspl, loss_function='chi2')
     gradient_fit.fit_parameters['u0'][1] = [0, 5.]  # PyLima has a short limit for u0
     gradient_fit.fit_parameters['tE'][1] = [0.1, 200.0]
-
+    #
     gradient_fit.model_parameters_guess = diffev_fit.fit_results['best_model'][0:3]
     gradient_fit.fit()
-
-    results = gradient_fit.fit_results['best_model']
-    chi2 = gradient_fit.fit_results['chi2']
-    return results, chi2
+    #
+    # results = gradient_fit.fit_results['best_model']
+    # chi2 = gradient_fit.fit_results['chi2']
+    return None #results, chi2
 
 
 def psplPLX_fit_pyLIMA(event_path, dataset_list, satellitedir):
@@ -571,7 +667,7 @@ def psplPLX_fit_pyLIMA(event_path, dataset_list, satellitedir):
 
 
 def filter_by_q(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha, a1_list, parallax=False,
-                pspl_thresh=-50):
+                pspl_thresh=-50,gridfile_name='grid_fit'):
     """
     Finds best initial conditions on grid for each value of q.
     Does a very simple check for s>1 s<1, but this often will not find an s/1/s degeneracy.
@@ -580,7 +676,7 @@ def filter_by_q(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_al
     ns = grid_s.shape[0]
     na = grid_alpha.shape[0]
     n_models = nq * ns * na
-    grid_file = np.loadtxt(f'{event_path}/Data/grid_fit.txt')
+    grid_file = np.loadtxt(f'{event_path}/Data/{gridfile_name}')
     if parallax:
         best_grid_models = np.zeros(shape=(nq, 11))
         # print(f'PSPL + PLX pars: {pspl_pars[0]} {pspl_pars[1]} {pspl_pars[2]} {pspl_pars[3]} {pspl_pars[4]}')
@@ -636,7 +732,7 @@ def filter_by_q(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_al
 def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha,
                       parallax=False, pspl_thresh=0,
                       number_of_best_models_before_q_filter=13, number_of_final_models=20,
-                      number_of_minimum_unique_q=4):
+                      number_of_minimum_unique_q=4,gridfile_name=grid_fit):
     """
     Finds best initial conditions on grid, with only one model allowed for each q and s.
     Tries to ensure 4 unique mass ratios, but will stop at 20 total initial conditions.
@@ -651,7 +747,7 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
     nq, ns, na = grid_q.shape[0], grid_s.shape[0], grid_alpha.shape[0]
     n_models = nq * ns * na
     # Read in grid file
-    grid_file = np.loadtxt(f'{event_path}/Data/grid_fit.txt')
+    grid_file = np.loadtxt(f'{event_path}/Data/{gridfile_name}.txt')
     chi2 = grid_file[:, 1]
     delta_chi2 = pspl_chi2 - chi2
     # Recover q,s,alpha values for each model
@@ -833,12 +929,12 @@ def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, g
     return best_grid_models
 
 
-def combine_grid_files(event_path, parallel):
+def combine_grid_files(event_path, gridfile_name,parallel):
     data_path = f'{event_path}/Data'
     if parallel:
-        if os.path.exists(f'{data_path}/grid_fit.txt'):
-            os.remove(f'{data_path}/grid_fit.txt')
-        grid_files = glob.glob(f'{data_path}/grid_fit*')
+        if os.path.exists(f'{data_path}/{gridfile_name}.txt'):
+            os.remove(f'{data_path}/{gridfile_name}.txt')
+        grid_files = glob.glob(f'{data_path}/{gridfile_name}*')
         dataframes = []
         for file in grid_files:
             print(file)
@@ -850,10 +946,10 @@ def combine_grid_files(event_path, parallel):
         grid_fit = pd.concat(dataframes)
         del dataframes
         grid_fit = grid_fit.sort_values('index')
-        grid_fit.to_csv(f'{data_path}/grid_fit.txt', index=False, header=False, sep=' ')
+        grid_fit.to_csv(f'{data_path}/{gridfile_name}.txt', index=False, header=False, sep=' ')
     else:
-        if os.path.exists(f'{data_path}/grid_fit0.txt'):
-            shutil.move(f'{event_path}/Data/grid_fit0.txt', f'{event_path}/Data/grid_fit.txt')
+        if os.path.exists(f'{data_path}/{gridfile_name}.txt'):
+            shutil.move(f'{event_path}/Data/{gridfile_name}.txt', f'{event_path}/Data/{gridfile_name}.txt')
         else:
             raise FileNotFoundError
     return None
@@ -885,33 +981,40 @@ def write_inital_conditions(event_path,initial_conditions,parallax=False):
 
 
 def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_thresh, processors,
-              satellitedir, parallax=False, method='lm', use_saved_pspl=False):
+              satellitedir, parallax=False, use_saved_pspl=False):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     # First do the PSPL fit
-    # results=pspl_fit_pyLIMA(event_path=event_path,dataset_list=dataset_list)
-    # pspl_pars = [results['u0'],results['tE'],results['t0']]
-    # pspl_chi2 = results['chi2']
-    if use_saved_pspl:
-        pspl = np.loadtxt(f'{event_path}/Data/pspl_pars.txt', delimiter=',')
-        if parallax:
-            pspl_pars = pspl[0:5]
-        else:
-            pspl_pars = pspl[0:3]
-        pspl_chi2 = pspl[-1]
+    # if use_saved_pspl:
+    #     pspl = np.loadtxt(f'{event_path}/Data/pspl_pars.txt', delimiter=',')
+    #     if parallax:
+    #         pspl_pars = pspl[0:5]
+    #     else:
+    #         pspl_pars = pspl[0:3]
+    #     pspl_chi2 = pspl[-1]
+
+
+    if parallax:
+        if not use_saved_pspl:
+            model_types_ = ['PSPL_PLX']
+            fit_single_lens_models(event_path, processors, satellitedir, modeltypes=model_types_)
+        pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,4,5,6])
+        pspl_pars_pos = list(pspl_pars[0,0:5])
+        pspl_pars_neg = list(pspl_pars[1,0:5])
+        pspl_chi2_pos = pspl_pars[0,-1]
+        pspl_chi2_neg = pspl_pars[1, -1]
+
     else:
-        if parallax:
-            pspl_results, pspl_chi2 = psplPLX_fit_pyLIMA(event_path=event_path, dataset_list=dataset_list,
-                                                         satellitedir=satellitedir)
-            pspl_pars = [pspl_results[1], pspl_results[2], pspl_results[0] - 2_450_000, pspl_results[3],
-                         pspl_results[4]]
-        else:
-            pspl_results, pspl_chi2 = pspl_fit_pyLIMA(event_path=event_path, dataset_list=dataset_list)
-            pspl_pars = [pspl_results[1], pspl_results[2], pspl_results[0] - 2_450_000]
+        if not use_saved_pspl:
+            model_types_ = ['PSPL_PLX']
+            fit_single_lens_models(event_path, processors, satellitedir, modeltypes=model_types_)
+        pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,4])
+        pspl_chi2 = pspl_pars[-1]
+        pspl_pars = list(pspl_pars[0:3])
+
+
     # if method == 'lm':
     #    pspl_chi2 = pspl_results.cost*2
     # else: pspl_chi2 = pspl_results.chi2
-
-    print(pspl_chi2)
 
     print(pspl_pars)
     # save pspl fit to a txt file
@@ -920,12 +1023,36 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     if processors == 1:
         parallel = False
         # grid_file_name = f'{event_path}/Data/grid_fit.txt'
-        grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
+        if parallax:
+            #first do +u0 search
+            grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_pos,
+                     grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
+                     pspl_chi2=pspl_chi2_neg,
+                     parallax=parallax,gridfile_name='gridfit_pos')
+            #now -u0
+            grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_neg,
+                     grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
+                     pspl_chi2=pspl_chi2_neg,
+                     parallax=parallax, gridfile_name='gridfit_neg')
+        else:
+            grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
                  grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list, pspl_chi2=pspl_chi2,
                  parallax=parallax)
     else:
         parallel = True
-        grid_fit_parallelized(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
+        if parallax:
+            grid_fit_parallelized(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_pos,
+                                  grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
+                                  pspl_chi2=pspl_chi2_pos,
+                                  parallax=parallax, use_croin=False, nprocessors=processors,gridfile_name='grid_fit_pos')
+
+            grid_fit_parallelized(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_neg,
+                                  grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
+                                  pspl_chi2=pspl_chi2_neg,
+                                  parallax=parallax, use_croin=False, nprocessors=processors,gridfile_name='grid_fit_neg')
+
+        else:
+            grid_fit_parallelized(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
                               grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
                               pspl_chi2=pspl_chi2,
                               parallax=parallax, use_croin=False, nprocessors=processors)
@@ -943,7 +1070,6 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     # Now run these in RTModel
     # Have RTModel prints go to log not stdout
     rtm = RTModel.RTModel()
-    rtm.set_processors(nprocessors=processors)
     rtm.set_event(event_path)
     # if os.path.exists(f'{event_path}/Nature.txt'):
     rtm.archive_run()
@@ -952,14 +1078,26 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     for archived_run in archive_list:
         shutil.rmtree(archived_run)
     # Write some outputs after clearing the directory
-    with open(f'{event_path}/Data/pspl_pars.txt', 'w') as f:
-        f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
-    # np.savetxt(fname=f'{event_path}/Data/ICGS_initconds.txt', X=init_conds)  # save init conds to a text file
-    # np.savetxt(f'{event_path}/Data/grid_fit.txt', grid_fit_results) # change to npy or parquet later
-    
-    combine_grid_files(event_path, parallel=parallel)
-    init_conds = filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha, parallax,
-                                   pspl_thresh=0)
+    #with open(f'{event_path}/Data/pspl_pars.txt', 'w') as f:
+    #    f.write(f'{pspl_pars[0]},{pspl_pars[1]},{pspl_pars[2]},{pspl_chi2}')
+    # write initial conditions
+    if parallax:
+        init_conds_pos = filter_by_q_and_s(event_path, pspl_pars_pos, pspl_chi2_pos, tstar, grid_q, grid_s, grid_alpha, parallax,
+                                       pspl_thresh=-100,gridfile_name = 'grid_fit_pos')
+        init_conds_neg = filter_by_q_and_s(event_path, pspl_pars_neg, pspl_chi2_neg, tstar, grid_q, grid_s, grid_alpha, parallax,
+                                       pspl_thresh=-100,gridfile_name = 'grid_fit_neg')
+        #combind two dataframes
+        init_conds = np.concatenate((init_conds_pos,init_conds_neg))
+        #print(init_conds)
+
+    else:
+        init_conds = filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha, parallax,
+                                       pspl_thresh=0)
+
+
+
+
+    #TODO fix so filter_by_q_and_s just returns a dataframe.
     filtered_df = pd.DataFrame(init_conds, columns=names)
     np.savetxt(f'{event_path}/Data/ICGS_initconds_chi2.txt', filtered_df.values)
 
@@ -979,12 +1117,9 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold, modelcategories=modeltypes),  # nostatic=nostatic)
     rtm.Reader()
     rtm.InitCond()
-
-
     # Do FSPL fit for comparison
 
     if parallax:
-
         print('Launching PS Fits')
         rtm.launch_fits('PS')
         rtm.ModelSelector('PS')
