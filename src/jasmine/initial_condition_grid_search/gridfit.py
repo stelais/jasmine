@@ -440,6 +440,13 @@ def single_lens_fit_RTModel(event_path,nprocessors,satellitedir,cleanup_models,p
 
             rtm.parameters_ranges['PX'][3][0] = np.log(1E-6)
             rtm.parameters_ranges['PX'][3][1] = np.log(2E-6)
+
+            rtm.parameters_ranges['PX'][4][0] = 0.5
+            rtm.parameters_ranges['PX'][4][1] = -0.5
+
+            rtm.parameters_ranges['PX'][5][0] = 0.5
+            rtm.parameters_ranges['PX'][5][1] = -0.5
+
         else:
             nostatic=False
             modeltypes = ['PS']
@@ -732,7 +739,7 @@ def filter_by_q(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_al
 def filter_by_q_and_s(event_path, pspl_pars, pspl_chi2, tstar, grid_q, grid_s, grid_alpha,
                       parallax=False, pspl_thresh=0,
                       number_of_best_models_before_q_filter=13, number_of_final_models=20,
-                      number_of_minimum_unique_q=4,gridfile_name=grid_fit):
+                      number_of_minimum_unique_q=4,gridfile_name='grid_fit'):
     """
     Finds best initial conditions on grid, with only one model allowed for each q and s.
     Tries to ensure 4 unique mass ratios, but will stop at 20 total initial conditions.
@@ -981,7 +988,7 @@ def write_inital_conditions(event_path,initial_conditions,parallax=False):
 
 
 def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_list, pspl_thresh, processors,
-              satellitedir, parallax=False, use_saved_pspl=False):
+              satellitedir, parallax=False, finite_source = False, use_saved_pspl=False):
     """ Wrapper Function to go from pspl_fit to final RTModel runs."""
     # First do the PSPL fit
     # if use_saved_pspl:
@@ -995,28 +1002,43 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
 
     if parallax:
         if not use_saved_pspl:
-            model_types_ = ['PSPL_PLX']
+            if finite_source:
+                model_types_ = ['FSPL_PLX']
+            else:
+                model_types_ = ['PSPL_PLX']
             fit_single_lens_models(event_path, processors, satellitedir, modeltypes=model_types_)
-        pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,4,5,6])
+        pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,4,5,3,6])
+        print(pspl_pars)
         pspl_pars_pos = list(pspl_pars[0,0:5])
         pspl_pars_neg = list(pspl_pars[1,0:5])
         pspl_chi2_pos = pspl_pars[0,-1]
         pspl_chi2_neg = pspl_pars[1, -1]
 
+        if finite_source:
+            tstar_pos = pspl_pars_pos[1]*pspl_pars[0,5]
+            tstar_neg = pspl_pars_neg[1]*pspl_pars[1,5]
+        else:
+            tstar_pos = tstar
+            tstar_neg = tstar
     else:
         if not use_saved_pspl:
-            model_types_ = ['PSPL_PLX']
+            if finite_source:
+                model_types_ = ['FSPL']
+            else:
+                model_types_ = ['PSPL']
             fit_single_lens_models(event_path, processors, satellitedir, modeltypes=model_types_)
-        pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,4])
+        pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,3,4])
         pspl_chi2 = pspl_pars[-1]
+        if finite_source:
+            tstar = pspl_pars[1]*pspl_pars[3]
         pspl_pars = list(pspl_pars[0:3])
-
+    print(f'tstar = {tstar}')
 
     # if method == 'lm':
     #    pspl_chi2 = pspl_results.cost*2
     # else: pspl_chi2 = pspl_results.chi2
 
-    print(pspl_pars)
+    #print(pspl_pars)
     # save pspl fit to a txt file
     #
     time0 = time.time()
@@ -1025,15 +1047,16 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         # grid_file_name = f'{event_path}/Data/grid_fit.txt'
         if parallax:
             #first do +u0 search
+            print(pspl_pars_pos)
             grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_pos,
-                     grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
-                     pspl_chi2=pspl_chi2_neg,
-                     parallax=parallax,gridfile_name='gridfit_pos')
+                     grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar_pos, a1_list=a1_list,
+                     pspl_chi2=pspl_chi2_pos,
+                     parallax=parallax,gridfile_name='grid_fit_pos')
             #now -u0
             grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_neg,
-                     grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
+                     grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar_neg, a1_list=a1_list,
                      pspl_chi2=pspl_chi2_neg,
-                     parallax=parallax, gridfile_name='gridfit_neg')
+                     parallax=parallax, gridfile_name='grid_fit_neg')
         else:
             grid_fit(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars,
                  grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list, pspl_chi2=pspl_chi2,
@@ -1041,6 +1064,7 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     else:
         parallel = True
         if parallax:
+            print(pspl_pars_pos)
             grid_fit_parallelized(event_path=event_path, dataset_list=dataset_list, pspl_pars=pspl_pars_pos,
                                   grid_s=grid_s, grid_q=grid_q, grid_alpha=grid_alpha, tstar=tstar, a1_list=a1_list,
                                   pspl_chi2=pspl_chi2_pos,
@@ -1108,6 +1132,18 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
         # nostatic = False
         modeltypes = ['PS', 'PX', 'LS', 'LX', 'LO']
 
+
+
+
+    rtm = RTModel.RTModel()
+    rtm.set_event(event_path)
+    # if os.path.exists(f'{event_path}/Nature.txt'):
+    rtm.archive_run()
+    # have to remove old stuff or it affects the InitConds for everything.
+    archive_list = glob.glob(f'{event_path}/run-*')
+    for archived_run in archive_list:
+        shutil.rmtree(archived_run)
+
     rtm.set_satellite_dir(satellitedir=satellitedir)
     peak_threshold = 5
     rtm.set_processors(nprocessors=processors)
@@ -1162,47 +1198,69 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
     return None
 
 
-def run_event_from_crash(event_path, processors, satellitedir):
-    """ run from an error (user) to final RTModel runs."""
-
-    # Now run these in RTModel
-    # Have RTModel prints go to log not stdout
-    time0 = time.time()
-    init_conds = np.loadtxt(fname=f'{event_path}/Data/ICGS_initconds.txt')
-    rtm = RTModel.RTModel()
-    rtm.set_processors(nprocessors=processors)
-    rtm.set_event(event_path)
-    modeltypes = ['PS', 'LS', 'LX', 'LO']
-    rtm.set_satellite_dir(satellitedir=satellitedir)
-    peak_threshold = 5
-    rtm.set_processors(nprocessors=processors)
-    rtm.set_event(event_path)
-    rtm.set_satellite_dir(satellitedir=satellitedir)
-    rtm.config_Reader(otherseasons=0, binning=1000000, renormalize=0)
-    rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold, modelcategories=modeltypes)
-    rtm.Reader()
-    rtm.InitCond()
-    # Do FSPL fit for comparison
-    print('Launching PS Fits')
-    rtm.launch_fits('PS')
-    rtm.ModelSelector('PS')
-    print('Launching LS Fits')
-    num_init_cond = init_conds.shape[0]
-    for n in range(num_init_cond):
-        init_cond = list(init_conds[n, :])
-        # launch each fit from the init conds
-        rtm.LevMar(f'LSfit{n:03}', parameters=init_cond)
-    rtm.ModelSelector('LS')
-    print('Launching LX and LO fits')
-    rtm.launch_fits('LX')
-    rtm.ModelSelector('LX')
-    rtm.launch_fits('LO')
-    rtm.ModelSelector('LO')
-    rtm.Finalizer()
-    print('Done')
-    time1 = time.time()
-    print(f'RTModel time: {time1 - time0}')
-    return None
+# def run_event_from_crash(event_path, processors, satellitedir, parallax):
+#     """ run from an error (user) to final RTModel runs."""
+#
+#     if parallax:
+#         # nostatic = True
+#         modeltypes = ['PS', 'PX', 'LX', 'LO']
+#     else:
+#         # nostatic = False
+#         modeltypes = ['PS', 'PX', 'LS', 'LX', 'LO']
+#
+#     rtm.set_satellite_dir(satellitedir=satellitedir)
+#     peak_threshold = 5
+#     rtm.set_processors(nprocessors=processors)
+#     rtm.set_event(event_path)
+#     rtm.set_satellite_dir(satellitedir=satellitedir)
+#     rtm.config_Reader(otherseasons=0, binning=1000000, renormalize=0)
+#     rtm.config_InitCond(usesatellite=1, peakthreshold=peak_threshold, modelcategories=modeltypes),  # nostatic=nostatic)
+#     rtm.Reader()
+#     rtm.InitCond()
+#     # Do FSPL fit for comparison
+#
+#     if parallax:
+#         print('Launching PS Fits')
+#         rtm.launch_fits('PS')
+#         rtm.ModelSelector('PS')
+#
+#         print('Launching PX Fits')
+#         rtm.launch_fits('PX')
+#         rtm.ModelSelector('PX')
+#
+#         write_inital_conditions(event_path, filtered_df, parallax=parallax)
+#         print('Launching LX Fits')
+#         rtm.launch_fits('LX')
+#         rtm.ModelSelector('LX')
+#
+#
+#     else:
+#         print('Launching PS Fits')
+#         rtm.launch_fits('PS')
+#         rtm.ModelSelector('PS')
+#
+#         print('Launching PX Fits')
+#         rtm.launch_fits('PX')
+#         rtm.ModelSelector('PX')
+#
+#         write_inital_conditions(event_path, filtered_df, parallax=parallax)
+#         print('Launching LS Fits')
+#         rtm.launch_fits('LS')
+#         rtm.ModelSelector('LS')
+#
+#         print('Launching LX fits')
+#         rtm.launch_fits('LX')
+#         rtm.ModelSelector('LX')
+#
+#     print('Launching LO fits')
+#     rtm.launch_fits('LO')
+#     rtm.ModelSelector('LO')
+#     rtm.Finalizer()
+#     print('Done')
+#     time1 = time.time()
+#     print(f'RTModel time: {time1 - time0}')
+#     return None
+#     return None
 
 
 def update_event(event_path, processors, satellitedir):
