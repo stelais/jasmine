@@ -5,118 +5,86 @@ import pandas as pd
 import numpy as np
 
 
-def main(file_path_, run_version_, root_path_):
-    df = pd.read_csv(file_path_)
-    df.dropna(inplace=True)
+def chi2_cut(single_lens_chi2, binary_lens_chi2, threshold=500):
+    """
+    Check if the difference between the single lens model chi2 and the best binary lens model chi2 exceeds the threshold.
+    """
+    return (single_lens_chi2 - binary_lens_chi2) > threshold
 
-    # best chi2 of Ls and LX (excluding LO for now - cause crazy orbits)
-    df['best_chi2'] = df[['LS_chi2', 'LX_chi2']].min(axis=1)
+
+def acceptable_mass_ratio_range(model_mass_ratio, true_mass_ratio, log10_threshold=0.301):
+    """
+    Check if the absolute log10 difference between the model mass ratio and the true mass ratio is within the threshold 0.301
+    10^0.301 ~ 2 . So model_q should not exceed 2*true_q, and vice versa.
+    """
+    ratio = model_mass_ratio / true_mass_ratio
+    return np.abs(np.log10(ratio)) <= log10_threshold
+
+
+def best_model_generator(dataframe):
+    # best chi2 of Ls and LX (Exclude LO cause crazy orbits for now)
+    dataframe['best_chi2'] = dataframe[['LS_chi2', 'LX_chi2']].min(axis=1)
     # name of the lowest chi2 models:
-    df['best_chi2_name'] = df[['LS_chi2', 'LX_chi2']].idxmin(axis=1)
+    dataframe['best_chi2_name'] = dataframe[['LS_chi2', 'LX_chi2']].idxmin(axis=1)
     # save the best mass ratio according to the lowest chi2 model:
-    df['best_mass_ratio'] = df.apply(lambda row: row[f"{str(row['best_chi2_name']).replace('_chi2', '')}_mass_ratio"],
-                                     axis=1)
+    dataframe['best_mass_ratio'] = dataframe.apply(
+        lambda row: row[f"{str(row['best_chi2_name']).replace('_chi2', '')}_mass_ratio"],
+        axis=1)
+    return dataframe
 
-    # Step 1 : Create a boolean mask for chi2 difference > 500 for any model .
-    # e.g. if LS_chi2 is 500 (or more) smaller than PS_chi2, then boolean is true = passes the cut
-    print('\nChi2 cut...')
-    chi2_mask_LS = (df['PS_chi2'] - df[f'LS_chi2']) > 500
-    chi2_mask_LX = (df['PS_chi2'] - df[f'LX_chi2']) > 500
-    chi2_mask_best = (df['PS_chi2'] - df[f'best_chi2']) > 500
-    combined_chi2_mask_or = chi2_mask_LS | chi2_mask_LX
-    combined_chi2_mask_and = chi2_mask_LS & chi2_mask_LX
-    print("chi2 > 500 counts:")
-    print("  LS:", chi2_mask_LS.sum())
-    print("  LX:", chi2_mask_LX.sum())
-    print("  best model:", chi2_mask_best.sum())
-    print('  combined OR: ', combined_chi2_mask_or.sum())
-    print('  combined AND: ', combined_chi2_mask_and.sum())
-    print()
 
-    # --- Step 2: mass ratio masks ---
-    # e.g. if LS_mass_ratio is off by more than a factor of 2 (0.3 in log10) from true_mass_ratio, then boolean is true = passes the cut
-    print('\nMass ratio cut...')
-    ratio_LS = df['LS_mass_ratio'] / df['true_mass_ratio']
-    mass_mask_LS = np.abs(np.log10(ratio_LS.replace(0, np.nan))) > 0.3
-    ratio_LX = df['LX_mass_ratio'] / df['true_mass_ratio']
-    mass_mask_LX = np.abs(np.log10(ratio_LX.replace(0, np.nan))) > 0.3
-    ratio_best = df['best_mass_ratio'] / df['true_mass_ratio']
-    mass_mask_best = np.abs(np.log10(ratio_best.replace(0, np.nan))) > 0.3
-    print("mass ratio counts (|log10(q_model/q_true)| > 0.3):")
-    print("  LS:", mass_mask_LS.sum())
-    print("  LX:", mass_mask_LX.sum())
-    print("  best model:", mass_mask_best.sum())
-    print()
+def main(file_path_, run_version_, root_path_, chi2_thresholds=None, saving_new_df=False):
+    if chi2_thresholds is None:
+        chi2_thresholds = [None, 0, 100, 200, 300, 400, 500, 600, 900, 1000]
+    df = pd.read_csv(file_path_)
+    complete_df = best_model_generator(df)
+    print('Total number of events in the original DataFrame:', len(complete_df))
+    for chi2_threshold in chi2_thresholds:
+        if chi2_threshold is None:
+            passed_chi2_df = complete_df.copy()
+        else:
+            complete_df[f'chi2_cut_{chi2_threshold}'] = chi2_cut(complete_df['PS_chi2'], complete_df['best_chi2'],
+                                                                 threshold=chi2_threshold)
+            # NEW DF for only those that passed the chi2 cut
+            passed_chi2_df = complete_df[complete_df[f'chi2_cut_{chi2_threshold}']].copy()
+            print('Number of events that had a best_PS_fit chi2 - best_binary_lens_fit chi2 > ', chi2_threshold, ' :',
+                  len(passed_chi2_df))
+            print('Number of events that did NOT pass the chi2 cut', chi2_threshold, ' :',
+                  len(complete_df[~complete_df[f'chi2_cut_{chi2_threshold}']].copy()))
+        # Now apply mass ratio cut for those that passed chi2 cut
+        passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}'] = acceptable_mass_ratio_range(
+            passed_chi2_df['best_mass_ratio'],
+            passed_chi2_df['true_mass_ratio'],
+            log10_threshold=0.301
+        )
+        print('Of them, number of events within the mass ratio acceptable range:',
+              len(passed_chi2_df[passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}']]),
+              f", {100 * len(passed_chi2_df[passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}']]) / len(passed_chi2_df):.2f}%")
+        print('Of them, number of events that exceed the mass ratio ratio cut / not acceptable:',
+              len(passed_chi2_df[~passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}']]),
+              f", {100 * len(passed_chi2_df[~passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}']]) / len(passed_chi2_df):.2f}%")
+        print()
+        if saving_new_df:
+            new_df = passed_chi2_df[['event_name', 'true_mass_ratio', 'LS_mass_ratio', 'LX_mass_ratio',
+                                     'PS_chi2', 'PX_chi2', 'LS_chi2', 'LX_chi2']].copy()
 
-    # --- Step 3: combined per-model masks ---
-    print('Combining chi2 and mass ratio cuts per model...')
-    mask_LS = chi2_mask_LS & mass_mask_LS
-    mask_LX = chi2_mask_LX & mass_mask_LX
-    mask_best = chi2_mask_best & mass_mask_best
-    print("Events passing BOTH cuts per model type only:")
-    print("  LS:", mask_LS.sum())
-    print("  LX:", mask_LX.sum())
-    print("  best model:", mask_best.sum())
-    print("Events passing combined chi2 cut OR, but per model mass ratio:")
-    print("  LS:", (combined_chi2_mask_or & mass_mask_LS).sum())
-    print("  LX:", (combined_chi2_mask_or & mass_mask_LX).sum())
-    master_combined_or = combined_chi2_mask_or & (mass_mask_LS & mass_mask_LX)
-    print("  Combined chi2 cut OR and all mass ratio cuts:", master_combined_or.sum())
-    print("Events passing combined chi2 cut AND, but per model mass ratio:")
-    print("  LS:", (combined_chi2_mask_and & mass_mask_LS).sum())
-    print("  LX:", (combined_chi2_mask_and & mass_mask_LX).sum())
-    master_combined_and = combined_chi2_mask_and & (mass_mask_LS & mass_mask_LX)
-    print("  Combined chi2 cut AND and all mass ratio cuts:", master_combined_and.sum())
-
-    # # --- Step 4: Combined mask versions, define criteria ---
-    print("\nTotal events passing ALL model:", (mask_LS & mask_LX).sum())
-    print("Total unique events passing any model:", (mask_LS | mask_LX).sum())
-    print("Total unique events passing best model:", mask_best.sum())
-
-    print('\nCriterion 1: ')
-    print('Criterion 1: If any PS_chi2 - L*_chi2 > 500 AND  All abs(log10(L*_mass_ratio / true_mass_ratio)) > 0.3')
-    print('v24: 237 events and v31: 227 events')
-    print("Combined chi2 cut OR and all mass ratio cuts:", master_combined_or.sum())
-    selected_c1 = df[master_combined_or].copy()
-
-    print('\nCriterion 2: ')
-    print('Criterion 2: If all PS_chi2 - L*_chi2 > 500 AND All abs(log10(L*_mass_ratio / true_mass_ratio)) > 0.3')
-    print('v24: 191 events and v31: 184 events')
-    print("chi2_mask_LS & mass_mask_LS & chi2_mask_LX & mass_mask_LX")
-    print("Total events passing ALL model:", (mask_LS & mask_LX).sum())
-    selected_c2 = df[(mask_LS & mask_LX)].copy()
-
-    print('\nCriterion 3: ')
-    print('Criterion 3: If PS_chi2 - best_L*_chi2 > 500  AND  abs(log10(best_L*_mass_ratio / true_mass_ratio)) > 0.3')
-    print('v24: 257 events and v31: 267 events')
-    print("Total unique events passing best model:", mask_best.sum())
-    selected_c3 = df[mask_best].copy()
-    print()
-
-    # --- Step 5: select rows ---
-    selected_c1 = selected_c1[['event_name', 'true_mass_ratio',
-                               'LS_mass_ratio', 'LX_mass_ratio',
-                               'PS_chi2', 'LS_chi2', 'LX_chi2']]
-    selected_c2 = selected_c2[['event_name', 'true_mass_ratio',
-                               'LS_mass_ratio', 'LX_mass_ratio',
-                               'PS_chi2', 'LS_chi2', 'LX_chi2']]
-    selected_c3 = selected_c3[['event_name', 'true_mass_ratio',
-                               'LS_mass_ratio', 'LX_mass_ratio',
-                               'PS_chi2', 'LS_chi2', 'LX_chi2']]
-
-    # --- Step 6: save files ---
-    # Save the filtered DataFrame to a new CSV file
-    selected_c1.to_csv(f'{root_path_}/c1_{run_version_}_events_failure_in_q.csv', index=False)
-    selected_c2.to_csv(f'{root_path_}/c2_{run_version_}_events_failure_in_q.csv', index=False)
-    selected_c3.to_csv(f'{root_path_}/c3_{run_version_}_events_failure_in_q.csv', index=False)
+            output_csv = f"{root_path_}/{run_version_}_chi2_threshold_{chi2_threshold}.csv"
+            new_df.to_csv(output_csv, index=False)
+            print(f"Saved filtered DataFrame to {output_csv}")
+            output_csv_2 = f"{root_path_}/{run_version_}_chi2_threshold_{chi2_threshold}_acceptable_mass_ratio.csv"
+            acceptable_q_df = new_df[passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}']]
+            acceptable_q_df.to_csv(output_csv_2, index=False)
+            print(f"Saved filtered DataFrame to {output_csv_2}")
+            output_csv_3 = f"{root_path_}/{run_version_}_chi2_threshold_{chi2_threshold}_not_acceptable_mass_ratio.csv"
+            not_acceptable_q_df = new_df[~passed_chi2_df[f'acceptable_mass_ratio_range_chi2_{chi2_threshold}']]
+            not_acceptable_q_df.to_csv(output_csv_3, index=False)
+            print(f"Saved filtered DataFrame to {output_csv_3}")
 
 
 if __name__ == "__main__":
     # Load the CSV file generated by `rtmodel_wrapper_for_roman_simulations.py`
-    # run_version = 'v31'
-    # run_version = 'v24'
-    run_version = 'ICGS'
-    print(run_version)
+    run_version = 'v31'
+    print(run_version, '\n')
     # ADAPT THIS
     if run_version == 'v31':
         root_path = '/Users/stela/Documents/Scripts/orbital_task/RTModel_runs/sample_rtmodel_v3.1'
@@ -129,4 +97,4 @@ if __name__ == "__main__":
         file_path = f'{root_path}/ICGS_true_and_rtmodel_fits_done.csv'
     else:
         raise ValueError("Invalid run_version. Use 'v31' or 'v24' or 'ICGS'.")
-    main(file_path, run_version, root_path)
+    main(file_path, run_version, root_path, saving_new_df=True)
