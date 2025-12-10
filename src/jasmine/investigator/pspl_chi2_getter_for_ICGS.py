@@ -1,11 +1,11 @@
 import os
 import csv
 
-def main(base_dir,  output_file):
+def main(base_dir, output_file, pspl_name = 'pspl_pars.txt'):
     results = []
     for root, dirs, files in os.walk(base_dir):
-        if "pspl_pars.txt" in files:
-            file_path = os.path.join(root, "pspl_pars.txt")
+        if pspl_name in files:
+            file_path = os.path.join(root, pspl_name)
             event_name = os.path.basename(os.path.dirname(root))  # e.g., event_0_917_1851
 
             try:

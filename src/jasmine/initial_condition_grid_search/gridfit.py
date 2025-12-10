@@ -41,7 +41,7 @@ def get_chi2(magnitude_list, mag_data_list, error_list, ndatasets):
         chi2 = np.sum(np.power(res, 2))
         chi2_list.append(chi2)
     chi2_sum = np.sum(chi2_list)
-
+    #print(chi2_list)
     return chi2_list, chi2_sum
 
 
@@ -107,6 +107,7 @@ def calculate_magnifications(pars, a1_list, data_list, ndatasets, VBMInstance, p
     blend_flux_list = []
     # loop over bands
     # print(pars)
+    #print(pars)
     for i in range(ndatasets):
         # must update a1 each time
         VBMInstance.a1 = a1_list[i]
@@ -152,6 +153,7 @@ def calculate_magnifications_plots(pars, a1_list, data_list, data_mag, ndatasets
         if parallax == False:
             magnifications, y1, y2 = VBMInstance.BinaryLightCurve(pars, data[:, -1])
         else:
+            VBMInstance.satellite = i+1
             magnifications, y1, y2, sorb = VBMInstance.BinaryLightCurveOrbital(pars, data[:, -1])
         meas_flux = 10 ** (-0.4 * data[:, 0])
         meas_flux_err = 0.4 * np.log(10) * 10 ** (-0.4 * data[:, 0]) * data[:, 1]
@@ -181,6 +183,7 @@ def evaluate_model(psplpars, fsblpars, a1_list, data_list, VBMInstance, pspl_chi
     ndatasets = len(data_list)
     # create parameter array for VBM.BinaryLightCurve()
     if parallax:
+        #print(psplpars)
         pars = [np.log(fsblpars[0]), np.log(fsblpars[1]), psplpars[0], fsblpars[2], np.log(fsblpars[3] / psplpars[1]),
                 np.log(psplpars[1]), psplpars[2], psplpars[3], psplpars[4]]
     else:
@@ -284,6 +287,7 @@ def create_random_indices(event_path, nmodels, ncores):
     for i in range(ncores):
         sub_indices = randomized_index[start_ind[i]:end_ind[i]]
         #np.save(f'{event_path}/Data/sub_index_list_{i}.npy', sub_indices)
+    randomized_index = np.arange(0,nmodels)
     return randomized_index, start_ind, end_ind
 
 
@@ -313,7 +317,6 @@ def evaluation_loop(common_parameters, index_list, iteration):
     VBMInstance.Tol = 1.0e-02
     VBMInstance.RelTol = 1.0e-03  # leave at 0 for ICGS
     VBMInstance.minannuli = 2
-
     with open(f'{event_path}/Data/{gridfile_name}{iteration}.txt', 'w') as grid_file:
         for index in index_list:
             grid_calculation_time_start = time.time() # Adding time track for each model evaluation/calculation
@@ -343,7 +346,6 @@ def grid_fit_parallelized(event_path, dataset_list, pspl_pars, grid_s, grid_q, g
     # print(s.shape[0])
     n_models = grid_q.shape[0] * grid_s.shape[0] * grid_alpha.shape[0]
     randomized_index, start, end = create_random_indices(event_path, n_models, nprocessors)
-
     # Initialize results array, with size depending on if static
     # N parameters + source+blend fluxes + 3 bands chi2 + total chi2 + delta chi2 = 7/9 + 2+3*len(al_list)
     # calc_pspl_chi2(pspl_pars,[data_list,3,VBMInstance])
@@ -428,9 +430,14 @@ def single_lens_fit_RTModel(event_path,nprocessors,satellitedir,cleanup_models,p
         if parallax:
             nostatic=True
             modeltypes = ['PS', 'PX']
+
+            rtm.parameters_ranges['PS'][1][1] = np.log(200)
+            rtm.parameters_ranges['PX'][1][1] = np.log(200)
+
         else:
             nostatic=False
             modeltypes = ['PS']
+            rtm.parameters_ranges['PS'][1][1] = np.log(200)
     else:
         if parallax:
             nostatic = True
@@ -441,17 +448,21 @@ def single_lens_fit_RTModel(event_path,nprocessors,satellitedir,cleanup_models,p
             rtm.parameters_ranges['PX'][3][0] = np.log(1E-6)
             rtm.parameters_ranges['PX'][3][1] = np.log(2E-6)
 
-            rtm.parameters_ranges['PX'][4][0] = 0.5
-            rtm.parameters_ranges['PX'][4][1] = -0.5
+            rtm.parameters_ranges['PS'][1][1] = np.log(200)
+            rtm.parameters_ranges['PX'][1][1] = np.log(200)
 
-            rtm.parameters_ranges['PX'][5][0] = 0.5
-            rtm.parameters_ranges['PX'][5][1] = -0.5
+            #rtm.parameters_ranges['PX'][4][0] = 0.5
+            #rtm.parameters_ranges['PX'][4][1] = -0.5
+
+            #rtm.parameters_ranges['PX'][5][0] = 0.5
+            #rtm.parameters_ranges['PX'][5][1] = -0.5
 
         else:
             nostatic=False
             modeltypes = ['PS']
             rtm.parameters_ranges['PS'][3][0] = np.log(1E-6)
             rtm.parameters_ranges['PS'][3][1] = np.log(2E-6)
+            rtm.parameters_ranges['PS'][1][1] = np.log(200)
     rtm.set_satellite_dir(satellitedir=satellitedir)
     peak_threshold = 5
     rtm.set_processors(nprocessors=nprocessors)
@@ -1008,12 +1019,12 @@ def run_event(event_path, dataset_list, grid_s, grid_q, grid_alpha, tstar, a1_li
                 model_types_ = ['PSPL_PLX']
             fit_single_lens_models(event_path, processors, satellitedir, modeltypes=model_types_)
         pspl_pars = np.loadtxt(f'{event_path}/Data/pspl_fits.txt',skiprows=1,usecols = [0,1,2,4,5,3,6])
-        print(pspl_pars)
+        #print(pspl_pars)
         pspl_pars_pos = list(pspl_pars[0,0:5])
         pspl_pars_neg = list(pspl_pars[1,0:5])
         pspl_chi2_pos = pspl_pars[0,-1]
         pspl_chi2_neg = pspl_pars[1, -1]
-
+        print(pspl_pars_pos,pspl_pars_neg)
         if finite_source:
             tstar_pos = pspl_pars_pos[1]*pspl_pars[0,5]
             tstar_neg = pspl_pars_neg[1]*pspl_pars[1,5]
