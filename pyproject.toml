@@ -24,7 +24,8 @@ dependencies = [
     "VBMicrolensing>=4.1.0",
     "moana-astro>=0.3.0",
     "RTModel>=2.4.0",
-    "joblib>=1.4.2"
+    "joblib>=1.4.2",
+    "pyarrow>=23.0.1"
 ]
 
 [project.urls]
