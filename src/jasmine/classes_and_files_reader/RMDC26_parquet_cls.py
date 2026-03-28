@@ -26,8 +26,16 @@ class Event:
         for filters, df_filters in df_event.groupby("filt"):
             # keep only relevant columns (and copy to avoid view issues)
             lightcurves[filters] = df_filters[
-                ["bjd", "mag", "mag_err", "extinction",
-                 "obs_x", "obs_y", "obs_z", "saturation_flag"]
+                [
+                    "bjd",
+                    "mag",
+                    "mag_err",
+                    "extinction",
+                    "obs_x",
+                    "obs_y",
+                    "obs_z",
+                    "saturation_flag",
+                ]
             ].copy()
 
         return cls(
@@ -41,27 +49,31 @@ class Event:
 
     @property
     def simple_lightcurve(self) -> Dict[str, pd.DataFrame]:
-        return {filters: df_event[["bjd", "mag", "mag_err"]].copy()
-                for filters, df_event in self.lightcurves.items()}
+        return {
+            filters: df_event[["bjd", "mag", "mag_err"]].copy()
+            for filters, df_event in self.lightcurves.items()
+        }
 
 
 if __name__ == "__main__":
     # Example usage
     # Read parquet file as a pandas dataframe
-    df = pd.read_parquet("../../../../data_hugging_face/RMDC26_Beginner_Tier_test.parquet")
-    df["bjd"] = df["bjd"] - 2_450_000 # adjust if you would like to
+    df = pd.read_parquet(
+        "../../../../data_hugging_face/RMDC26_Beginner_Tier_test.parquet"
+    )
+    df["bjd"] = df["bjd"] - 2_450_000  # adjust if you would like to
 
     # Load the event you want:
     event = Event.from_name("RMDC26_000001", df)
-    print('Event name: ', event.name)
-    print('Event l_deg: ', event.l_deg)
-    print('Event b_deg: ', event.b_deg)
-    print('Event ra_deg: ', event.ra_deg)
-    print('Event dec_deg: ', event.dec_deg)
+    print("Event name: ", event.name)
+    print("Event l_deg: ", event.l_deg)
+    print("Event b_deg: ", event.b_deg)
+    print("Event ra_deg: ", event.ra_deg)
+    print("Event dec_deg: ", event.dec_deg)
 
-    complete_lightcurve = event.lightcurves["F146"]
+    complete_lightcurve = event.lightcurves["F146"]  # pandas dataframe
     print("Part of complete lightcurve: \n", complete_lightcurve.head(3))
-    simple_lightcurve = event.simple_lightcurve["F146"]
+    simple_lightcurve = event.simple_lightcurve["F146"]  # pandas dataframe
     print("Part of simple lightcurve: \n", simple_lightcurve.head(3))
 
     print()
