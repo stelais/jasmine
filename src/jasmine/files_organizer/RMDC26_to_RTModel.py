@@ -63,6 +63,10 @@ def creating_rtmodel_directories(
         else:
             with open(f"{event_dir}/event.coordinates", "w") as f:
                 f.write(f"{rtmodel_event_coordinates}")
+
+        # Add limbdarkening in the future
+        # Add satellite coordinates in the future
+
         print(f"{event_dir} conclude!")
 
 
