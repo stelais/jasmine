@@ -44,7 +44,7 @@ def creating_rtmodel_directories(
             if filt not in filter_map:
                 raise ValueError(f"Unknown filter: {filt}")
 
-            filename = f"{filter_map[filt]}.txt"
+            filename = f"{filter_map[filt]}.dat"
             save_path = os.path.join(event_dir, filename)
 
             # Write header manually and then the data
@@ -73,6 +73,10 @@ def creating_rtmodel_directories(
         else:
             with open(f"{event_dir}/event.coordinates", "w") as f:
                 f.write(f"{rtmodel_event_coordinates}")
+
+        # Add limbdarkening in the future
+        # Add satellite coordinates in the future
+
         print(f"{event_dir} conclude!")
 
 
