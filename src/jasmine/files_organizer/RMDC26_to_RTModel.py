@@ -34,8 +34,18 @@ def creating_rtmodel_directories(
         os.makedirs(event_dir)
 
         # Iterate over available filters in simple_lightcurve
+        filter_map = {
+            "F213": "F213K",
+            "F146": "F146W",
+            "F087": "F087Z",
+        }
+
         for filt, lc_df in event.simple_lightcurve.items():
-            save_path = os.path.join(event_dir, f"{filt}_.dat")
+            if filt not in filter_map:
+                raise ValueError(f"Unknown filter: {filt}")
+
+            filename = f"{filter_map[filt]}.dat"
+            save_path = os.path.join(event_dir, filename)
 
             # Write header manually and then the data
             with open(save_path, "w") as f:
