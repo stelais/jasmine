@@ -35,7 +35,7 @@ def creating_rtmodel_directories(
 
         # Iterate over available filters in simple_lightcurve
         for filt, lc_df in event.simple_lightcurve.items():
-            save_path = os.path.join(event_dir, f"{filt}_.txt")
+            save_path = os.path.join(event_dir, f"{filt}_.dat")
 
             # Write header manually and then the data
             with open(save_path, "w") as f:
@@ -63,6 +63,10 @@ def creating_rtmodel_directories(
         else:
             with open(f"{event_dir}/event.coordinates", "w") as f:
                 f.write(f"{rtmodel_event_coordinates}")
+
+        # Add limbdarkening in the future
+        # Add satellite coordinates in the future
+
         print(f"{event_dir} conclude!")
 
 
