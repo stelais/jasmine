@@ -33,11 +33,18 @@ def creating_rtmodel_directories(
             raise FileExistsError(f"Event directory '{event_dir}' already exists.")
         os.makedirs(event_dir)
 
+        data_dir = os.path.join(event_dir, "Data")
+        if os.path.exists(data_dir):
+            raise FileExistsError(
+                f"data directory {data_dir} in event {event_dir} already exists."
+            )
+        os.makedirs(data_dir)
+
         # Iterate over available filters in simple_lightcurve
         filter_map = {
-            "F213": "F213K",
-            "F146": "F146W",
-            "F087": "F087Z",
+            "F213": "F213_K",
+            "F146": "F146_W",
+            "F087": "F087_Z",
         }
 
         for filt, lc_df in event.simple_lightcurve.items():
@@ -45,7 +52,7 @@ def creating_rtmodel_directories(
                 raise ValueError(f"Unknown filter: {filt}")
 
             filename = f"{filter_map[filt]}.dat"
-            save_path = os.path.join(event_dir, filename)
+            save_path = os.path.join(data_dir, filename)
 
             # Write header manually and then the data
             with open(save_path, "w") as f:
@@ -66,12 +73,12 @@ def creating_rtmodel_directories(
             .replace("d", ":")
             .replace("s", "")
         )
-        if os.path.exists(f"{event_dir}/event.coordinates"):
+        if os.path.exists(f"{data_dir}/event.coordinates"):
             raise FileExistsError(
-                f"File event.coordinates already exists in directory {event_dir}"
+                f"File event.coordinates already exists in directory {data_dir}"
             )
         else:
-            with open(f"{event_dir}/event.coordinates", "w") as f:
+            with open(f"{data_dir}/event.coordinates", "w") as f:
                 f.write(f"{rtmodel_event_coordinates}")
 
         # Add limbdarkening in the future
