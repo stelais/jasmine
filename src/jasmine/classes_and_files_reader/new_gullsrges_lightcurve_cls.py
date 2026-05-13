@@ -150,7 +150,7 @@ class SourceStarProperties:
         self.source_bolometric_magnitude = lightcurve_master['Source_Mbol'].values[0]
         self.source_Av = lightcurve_master['Source_Av'].values[0]
         self.source_l = lightcurve_master['Source_l'].values[0]
-        self.source_b = lightcurve_master['Source_l'].values[0]
+        self.source_b = lightcurve_master['Source_b'].values[0]
         self.source_ra = lightcurve_master['Source_RA20000'].values[0]
         self.source_dec = lightcurve_master['Source_DEC20000'].values[0]
         self.source_x = lightcurve_master['Source_x'].values[0]
