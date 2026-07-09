@@ -265,7 +265,7 @@ def main(data_dir) -> None:
     save_meta_and_obs_subsets(
         meta_df=meta_df,
         obs_df=obs_df,
-        output_dir=data_dir + '_per_category',
+        output_dir=data_dir / "per_category",
     )
 
     print("Example loading one event")
