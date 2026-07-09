@@ -151,6 +151,7 @@ def build_category_masks(meta_df: pd.DataFrame) -> Dict[str, pd.Series]:
     6. stellar_bd_2l2s:
        binary lens, binary source, Planet_q >= 0.04
     """
+    print("Building category masks...")
     binary_source = _as_bool_binary_source(meta_df)
     single_source = ~binary_source
 
@@ -170,6 +171,7 @@ def build_category_masks(meta_df: pd.DataFrame) -> Dict[str, pd.Series]:
     is_planetary = q.notna() & (q < 0.04)
     is_stellar_bd = q.notna() & (q >= 0.04)
 
+    print("Ready for the masks! ")
     masks = {
         "ffp": is_ffp,
         "simple_1l1s": is_simple_1l1s,
