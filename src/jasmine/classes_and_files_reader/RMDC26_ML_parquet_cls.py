@@ -1,5 +1,7 @@
-from __future__ import annotations
-
+"""
+RMDC26_ML_parquet_cls: classes and functions for reading RMDC26ML data from parquet files.
+TODO: ephemeris file
+"""
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
@@ -7,16 +9,9 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-
 # 1 Jupiter mass in Solar masses
 MJUP_TO_MSUN = 0.000954588
 FFP_MASS_LIMIT_MSUN = 13.0 * MJUP_TO_MSUN
-
-
-DATA_DIR = Path("/home/ec2-user/msos_events_project/data")
-
-META_FILE = DATA_DIR / "RMDC26_ML_Data_meta.parquet"
-OBS_FILE = DATA_DIR / "RMDC26_ML_Data_obs.parquet"
 
 
 @dataclass
@@ -33,10 +28,10 @@ class RMDC26Event:
 
     @classmethod
     def from_event_id(
-        cls,
-        event_id: int,
-        meta_df: pd.DataFrame,
-        obs_df: pd.DataFrame,
+            cls,
+            event_id: int,
+            meta_df: pd.DataFrame,
+            obs_df: pd.DataFrame,
     ) -> "RMDC26Event":
         meta_rows = meta_df[meta_df["event_id"] == event_id]
 
@@ -76,10 +71,10 @@ class RMDC26Event:
 
     @classmethod
     def from_name(
-        cls,
-        name: str,
-        meta_df: pd.DataFrame,
-        obs_df: pd.DataFrame,
+            cls,
+            name: str,
+            meta_df: pd.DataFrame,
+            obs_df: pd.DataFrame,
     ) -> "RMDC26Event":
         meta_rows = meta_df[meta_df["name"] == name]
 
@@ -188,9 +183,9 @@ def build_category_masks(meta_df: pd.DataFrame) -> Dict[str, pd.Series]:
 
 
 def save_meta_and_obs_subsets(
-    meta_df: pd.DataFrame,
-    obs_df: pd.DataFrame,
-    output_dir: Path,
+        meta_df: pd.DataFrame,
+        obs_df: pd.DataFrame,
+        output_dir: Path,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -216,7 +211,7 @@ def save_meta_and_obs_subsets(
         print()
 
 
-def print_category_summary(meta_df: pd.DataFrame) -> None:
+def print_category_summary(meta_df: pd.DataFrame, data_dir) -> None:
     masks = build_category_masks(meta_df)
 
     print("Category summary")
@@ -246,14 +241,17 @@ def print_category_summary(meta_df: pd.DataFrame) -> None:
             ["name", "event_id", "sim_label", "Source_Is_Binary", "Planet_q", "Lens_Mass"],
         ].copy()
 
-        unassigned_output = DATA_DIR / "RMDC26_ML_Data_meta_unassigned.parquet"
+        unassigned_output = data_dir / "RMDC26_ML_Data_meta_unassigned.parquet"
         unassigned.to_parquet(unassigned_output, index=False)
 
         print()
         print(f"Saved unassigned events to: {unassigned_output}")
 
 
-def main() -> None:
+def main(data_dir) -> None:
+    META_FILE = data_dir / "RMDC26_ML_Data_meta.parquet"
+    OBS_FILE = data_dir / "RMDC26_ML_Data_obs.parquet"
+
     print(f"Reading metadata: {META_FILE}")
     meta_df = pd.read_parquet(META_FILE)
 
@@ -261,13 +259,13 @@ def main() -> None:
     obs_df = pd.read_parquet(OBS_FILE)
 
     print()
-    print_category_summary(meta_df)
+    print_category_summary(meta_df, data_dir)
 
     print()
     save_meta_and_obs_subsets(
         meta_df=meta_df,
         obs_df=obs_df,
-        output_dir=DATA_DIR,
+        output_dir=data_dir + '_per_category',
     )
 
     print("Example loading one event")
@@ -287,4 +285,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    DATA_DIR = Path("/home/ec2-user/msos_events_project/data/ml_datachallenge")
+    main(data_dir=DATA_DIR)
