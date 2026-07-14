@@ -303,6 +303,37 @@ def convert_all_parquet_to_json(
 
     return written_paths
 
+def convert_all_categories_to_json(
+    per_event_id_dir: str | Path,
+    epoch_file: str | Path,
+    output_dir: str | Path,
+    *,
+    indent: int | None = None,
+) -> list[Path]:
+    """Convert all category folders under per_event_id into matching JSON folders."""
+
+    per_event_id_path = Path(per_event_id_dir)
+    output_path = Path(output_dir)
+
+    written_paths: list[Path] = []
+
+    for category_dir in sorted(per_event_id_path.iterdir()):
+        if not category_dir.is_dir():
+            continue
+
+        category_output_dir = output_path / category_dir.name
+
+        category_outputs = convert_all_parquet_to_json(
+            input_dir=category_dir,
+            epoch_file=epoch_file,
+            output_dir=category_output_dir,
+            indent=indent,
+        )
+
+        written_paths.extend(category_outputs)
+
+    return written_paths
+
 def plot_test_json(event_path: Path):
     import matplotlib.pyplot as plt
     with open(event_path) as f:
@@ -336,10 +367,19 @@ def plot_test_json(event_path: Path):
 
 if __name__ == "__main__":
     data_dir = Path("data/ml_datachallenge/")
-    input_dir = data_dir / "per_event_id/planetary2l1s"
-    epoch_file = data_dir / "RMDC26_ML_Data_epoch.parquet"
-    obs_file = input_dir / "RMDC26_ML_Data_obs_event_id_306455.parquet"
-    metafile = input_dir / "RMDC26_ML_Data_meta_event_id_306455.parquet"
     output_dir = data_dir / "json_events"
+    epoch_file = data_dir / "RMDC26_ML_Data_epoch.parquet"
+
+    # For one event conversion
+    # input_dir = data_dir / "per_event_id/planetary2l1s"
+    # obs_file = input_dir / "RMDC26_ML_Data_obs_event_id_306455.parquet"
+    # metafile = input_dir / "RMDC26_ML_Data_meta_event_id_306455.parquet"
     # one_parquet_to_json(obs_file, metafile, epoch_file, output_dir=output_dir)
-    # convert_all_parquet_to_json(input_dir, epoch_file, output_dir="json_events")
+
+    # For all events conversion
+    per_event_id_dir = data_dir / "per_event_id"
+    convert_all_categories_to_json(
+        per_event_id_dir=per_event_id_dir,
+        epoch_file=epoch_file,
+        output_dir=output_dir,
+    )
