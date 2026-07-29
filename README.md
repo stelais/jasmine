@@ -1,5 +1,5 @@
 # jasmine
-JASMINE: **J**oint **A**nalysis of **S**imulation for **M**icrolensing **IN**terested **E**vents
+JASMINE: **J**oint **A**nalysis of **S**imulation for **M**icrolensing **IN**teresting **E**vents
 
 ---
 Installing from github (should be most updated available version):
