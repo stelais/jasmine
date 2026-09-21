@@ -27,7 +27,7 @@ RAW_FOLDERS = {
 
 @lru_cache(maxsize=None)
 def read_raw_coordinates(path: Path) -> tuple[str, float, float]:
-    """Read and validate source coordinates in decimal degrees."""
+    """Read source coordinates in decimal degrees."""
     header = fits.getheader(path, ext=0)
 
     name = str(header["NAME"]).strip()
@@ -61,8 +61,10 @@ class VariableStarEvent:
         if not self.raw_dir.is_dir():
             raise NotADirectoryError(self.raw_dir)
 
-        with fits.open(self.fits_path, memmap=True) as hdul:
-            self.header = dict(hdul[0].header)
+        if not np.isfinite(self.zeropoint):
+            raise ValueError("zeropoint must be finite")
+
+        self.header = dict(fits.getheader(self.fits_path, ext=0))
 
     @property
     def objname(self) -> str:
@@ -76,7 +78,7 @@ class VariableStarEvent:
         return str(value).strip() if value is not None else None
 
     def find_coordinates(self) -> tuple[Path, float, float]:
-        """Match the Roman event to its original raw FITS file."""
+        """Match a Roman event to its original raw FITS file."""
         vartype = (self.vartype or "").lower()
 
         if vartype not in RAW_FOLDERS:
@@ -85,7 +87,7 @@ class VariableStarEvent:
         folder = self.raw_dir / RAW_FOLDERS[vartype]
         names = [self.objname]
 
-        # Match simulation names such as OGLE-BLG-DN-0001_ind0_3.
+        # Try exact names before removing a simulation suffix.
         source_name = re.sub(r"_ind\d+(?:_\d+)*$", "", self.objname)
         if source_name != self.objname:
             names.append(source_name)
@@ -117,20 +119,36 @@ class VariableStarEvent:
         mag_err: np.ndarray,
         zeropoint: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Convert magnitudes and errors to linear flux units."""
-        flux = 10.0 ** ((zeropoint - mag) / 2.5)
-        flux_err = mag_err * flux * np.log(10.0) / 2.5
+        """Convert magnitudes and propagate their uncertainties."""
+        with np.errstate(over="raise", invalid="raise"):
+            flux = 10.0 ** ((zeropoint - mag) / 2.5)
+            flux_err = mag_err * flux * np.log(10.0) / 2.5
+
+        if not (
+            np.all(np.isfinite(flux))
+            and np.all(np.isfinite(flux_err))
+        ):
+            raise ValueError("Flux conversion produced non-finite values")
+
+        # Apply the requested offset to the entire filter array.
+        if flux.size > 0:
+            minimum = np.min(flux)
+            if minimum < 0:
+                flux = flux - minimum + 1e-8
+
         return flux, flux_err
 
     def read_lightcurves(self) -> dict[str, pd.DataFrame]:
-        """Read every Roman FITS filter as a flux light curve."""
+        """Read Roman filters as time, flux, and flux_err arrays."""
         curves: dict[str, pd.DataFrame] = {}
 
         with fits.open(self.fits_path, memmap=True) as hdul:
             for hdu in hdul[1:]:
-                table = hdu.data
+                if not isinstance(hdu, (fits.BinTableHDU, fits.TableHDU)):
+                    continue
 
-                if table is None or not hasattr(table, "columns"):
+                table = hdu.data
+                if table is None:
                     continue
 
                 columns = {
@@ -154,10 +172,14 @@ class VariableStarEvent:
                     & (mag_err >= 0)
                 )
 
+                if not np.any(valid):
+                    raise ValueError(
+                        f"No valid photometry in {self.fits_path}, "
+                        f"filter {hdu.name}"
+                    )
+
                 flux, flux_err = self.magnitude_to_flux(
-                    mag=mag[valid],
-                    mag_err=mag_err[valid],
-                    zeropoint=self.zeropoint,
+                    mag[valid], mag_err[valid], self.zeropoint
                 )
 
                 curves[hdu.name] = (
@@ -179,27 +201,30 @@ class VariableStarEvent:
 
     def to_dataframe(self) -> pd.DataFrame:
         """Combine all Roman filters into one DataFrame."""
-        chunks: list[pd.DataFrame] = []
+        chunks = []
 
-        for filter_name, light_curve in self.read_lightcurves().items():
-            frame = light_curve.copy()
+        for filter_name, frame in self.read_lightcurves().items():
+            frame = frame.copy()
             frame.insert(0, "filter", filter_name)
             chunks.append(frame)
 
         return pd.concat(chunks, ignore_index=True)
 
     def to_json_dict(self) -> dict:
-        """Build an event dictionary with original source coordinates."""
-        raw_path, ra, dec = self.find_coordinates()
-        curves = self.read_lightcurves()
+        coordinate_error = None
 
-        light_curves = {
-            filter_name: {
-                column: frame[column].astype(float).tolist()
-                for column in ("time", "flux", "flux_err")
-            }
-            for filter_name, frame in curves.items()
-        }
+        try:
+            raw_path, ra, dec = self.find_coordinates()
+            raw_source = str(raw_path)
+            raw_match_status = "found"
+        except FileNotFoundError as error:
+            ra = None
+            dec = None
+            raw_source = None
+            raw_match_status = "not_found"
+            coordinate_error = str(error)
+
+        curves = self.read_lightcurves()
 
         return {
             "id": self.object_id,
@@ -211,7 +236,9 @@ class VariableStarEvent:
                 "name": self.objname,
                 "vartype": self.vartype,
                 "source_fits": self.fits_path.name,
-                "coordinate_source_fits": str(raw_path),
+                "raw_match_status": raw_match_status,
+                "coordinate_source_fits": raw_source,
+                "coordinate_error": coordinate_error,
                 "coordinate_units": "deg",
                 "input_photometry": "magnitude",
                 "output_photometry": "flux",
@@ -219,39 +246,45 @@ class VariableStarEvent:
             },
             "microlensing_event": None,
             "light_curve": None,
-            "light_curves": light_curves,
+            "light_curves": {
+                filter_name: {
+                    column: frame[column].astype(float).tolist()
+                    for column in ("time", "flux", "flux_err")
+                }
+                for filter_name, frame in curves.items()
+            },
         }
 
     def save_json(self, output_path: str | Path) -> Path:
-        """Validate and serialize before opening the destination."""
-        text = json.dumps(
-            self.to_json_dict(),
-            indent=2,
-            allow_nan=False,
-        )
+        return write_json(output_path, self.to_json_dict())
 
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(text + "\n", encoding="utf-8")
 
-        return output_path
+def write_json(path: str | Path, payload: dict) -> Path:
+    """Serialize before opening the output file."""
+    text = json.dumps(payload, indent=2, allow_nan=False)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text + "\n", encoding="utf-8")
+    return path
 
-def all_events_to_json(base_path: Path) -> Path:
+
+def all_events_to_json(base_path: str | Path) -> Path:
+    base_path = Path(base_path)
     input_dir = base_path / "raw_roman"
     output_dir = base_path / "json_events"
     raw_dir = base_path / "raw"
 
-    if not input_dir.is_dir():
-        raise NotADirectoryError(input_dir)
+    for directory in (input_dir, raw_dir):
+        if not directory.is_dir():
+            raise NotADirectoryError(directory)
 
     fits_paths = sorted(input_dir.rglob("*.fits"))
     if not fits_paths:
         raise RuntimeError(f"No FITS files found in {input_dir}")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     saved = 0
     skipped = 0
+    missing_raw = []
     failures = []
 
     print(f"Found {len(fits_paths)} FITS files", flush=True)
@@ -273,10 +306,22 @@ def all_events_to_json(base_path: Path) -> Path:
             )
 
             if destination.exists():
+                with destination.open("r", encoding="utf-8") as file:
+                    payload = json.load(file)
                 skipped += 1
             else:
-                event.save_json(destination)
+                payload = event.to_json_dict()
+                write_json(destination, payload)
                 saved += 1
+
+            metadata = payload.get("metadata") or {}
+            if metadata.get("raw_match_status") == "not_found":
+                missing_raw.append({
+                    "fits_path": str(fits_path),
+                    "json_path": str(destination),
+                    "objname": payload.get("objname"),
+                    "error": metadata.get("coordinate_error"),
+                })
 
         except Exception as error:
             failures.append({
@@ -289,28 +334,29 @@ def all_events_to_json(base_path: Path) -> Path:
             print(
                 f"[{index}/{len(fits_paths)}] "
                 f"Saved: {saved} | Skipped: {skipped} | "
+                f"Missing raw: {len(missing_raw)} | "
                 f"Failed: {len(failures)}",
                 flush=True,
             )
 
-    report_path = output_dir / "conversion_report.json"
-    report_path.write_text(
-        json.dumps(
-            {
-                "input_dir": str(input_dir),
-                "total": len(fits_paths),
-                "saved": saved,
-                "skipped_existing": skipped,
-                "failed": len(failures),
-                "failures": failures,
-            },
-            indent=2,
-        ) + "\n",
-        encoding="utf-8",
+    report_path = write_json(
+        output_dir / "conversion_report.json",
+        {
+            "input_dir": str(input_dir),
+            "total": len(fits_paths),
+            "saved": saved,
+            "skipped_existing": skipped,
+            "missing_raw_count": len(missing_raw),
+            "missing_raw": missing_raw,
+            "failed": len(failures),
+            "failures": failures,
+        },
     )
 
     print(f"\nOutput: {output_dir}")
     print(f"Report: {report_path}")
+    return report_path
+
 
 if __name__ == "__main__":
     # EXAMPLE
