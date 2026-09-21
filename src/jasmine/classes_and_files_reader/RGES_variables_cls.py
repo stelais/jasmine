@@ -235,3 +235,101 @@ class VariableStarEvent:
         output_path.write_text(text + "\n", encoding="utf-8")
 
         return output_path
+
+def all_events_to_json(base_path: Path) -> Path:
+    input_dir = base_path / "raw_roman"
+    output_dir = base_path / "json_events"
+    raw_dir = base_path / "raw"
+
+    if not input_dir.is_dir():
+        raise NotADirectoryError(input_dir)
+
+    fits_paths = sorted(input_dir.rglob("*.fits"))
+    if not fits_paths:
+        raise RuntimeError(f"No FITS files found in {input_dir}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    saved = 0
+    skipped = 0
+    failures = []
+
+    print(f"Found {len(fits_paths)} FITS files", flush=True)
+
+    for index, fits_path in enumerate(fits_paths, start=1):
+        try:
+            category = fits_path.parent.name.removeprefix(
+                "RGES_filters_"
+            ).removesuffix("_lightcurves_final")
+
+            event = VariableStarEvent(
+                fits_path=fits_path,
+                raw_dir=raw_dir,
+                zeropoint=27.615,
+            )
+
+            destination = (
+                output_dir / category / f"{event.objname}.json"
+            )
+
+            if destination.exists():
+                skipped += 1
+            else:
+                event.save_json(destination)
+                saved += 1
+
+        except Exception as error:
+            failures.append({
+                "fits_path": str(fits_path),
+                "error": f"{type(error).__name__}: {error}",
+            })
+            print(f"FAILED: {fits_path.name}: {error}", flush=True)
+
+        if index % 100 == 0 or index == len(fits_paths):
+            print(
+                f"[{index}/{len(fits_paths)}] "
+                f"Saved: {saved} | Skipped: {skipped} | "
+                f"Failed: {len(failures)}",
+                flush=True,
+            )
+
+    report_path = output_dir / "conversion_report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "input_dir": str(input_dir),
+                "total": len(fits_paths),
+                "saved": saved,
+                "skipped_existing": skipped,
+                "failed": len(failures),
+                "failures": failures,
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    print(f"\nOutput: {output_dir}")
+    print(f"Report: {report_path}")
+
+if __name__ == "__main__":
+    # EXAMPLE
+    # FOR ALL EVENTS
+    base = Path("your_path")
+    all_events_to_json(base)
+
+    # FOR ONE EVENT
+    event = VariableStarEvent(
+        fits_path=(
+                base / "raw_roman"
+                / "RGES_filters_CV_lightcurves_final"
+                / "RGES_filters_OGLE-BLG-DN-0001_ind0_3_lightcurves_final.fits"
+        ),
+        raw_dir=base / "raw",
+    )
+
+    raw_path, ra, dec = event.find_coordinates()
+    print(f"Source: {raw_path}")
+    print(f"RA: {ra}, Dec: {dec}")
+
+    event.save_json(base / "json_events" / "CV" / f"{event.objname}.json")
