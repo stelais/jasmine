@@ -283,9 +283,11 @@ def all_events_to_json(base_path: str | Path) -> Path:
         raise RuntimeError(f"No FITS files found in {input_dir}")
 
     saved = 0
-    skipped = 0
+    skipped_files = []
+    duplicate_outputs = []
     missing_raw = []
     failures = []
+    seen_destinations = {}
 
     print(f"Found {len(fits_paths)} FITS files", flush=True)
 
@@ -305,23 +307,46 @@ def all_events_to_json(base_path: str | Path) -> Path:
                 output_dir / category / f"{event.objname}.json"
             )
 
-            if destination.exists():
-                with destination.open("r", encoding="utf-8") as file:
-                    payload = json.load(file)
-                skipped += 1
-            else:
-                payload = event.to_json_dict()
-                write_json(destination, payload)
-                saved += 1
-
-            metadata = payload.get("metadata") or {}
-            if metadata.get("raw_match_status") == "not_found":
-                missing_raw.append({
+            # Detect different inputs targeting the same output this run.
+            if destination in seen_destinations:
+                duplicate_outputs.append({
                     "fits_path": str(fits_path),
+                    "first_fits_path": str(
+                        seen_destinations[destination]
+                    ),
                     "json_path": str(destination),
-                    "objname": payload.get("objname"),
-                    "error": metadata.get("coordinate_error"),
+                    "objname": event.objname,
+                    "reason": "Multiple FITS files target the same JSON",
                 })
+            else:
+                seen_destinations[destination] = fits_path
+
+                if destination.exists():
+                    with destination.open("r", encoding="utf-8") as file:
+                        payload = json.load(file)
+
+                    skipped_files.append({
+                        "fits_path": str(fits_path),
+                        "json_path": str(destination),
+                        "objname": event.objname,
+                        "reason": "JSON already exists",
+                        "stored_source_fits": (
+                            payload.get("metadata") or {}
+                        ).get("source_fits"),
+                    })
+                else:
+                    payload = event.to_json_dict()
+                    write_json(destination, payload)
+                    saved += 1
+
+                metadata = payload.get("metadata") or {}
+                if metadata.get("raw_match_status") == "not_found":
+                    missing_raw.append({
+                        "fits_path": str(fits_path),
+                        "json_path": str(destination),
+                        "objname": payload.get("objname"),
+                        "error": metadata.get("coordinate_error"),
+                    })
 
         except Exception as error:
             failures.append({
@@ -333,7 +358,9 @@ def all_events_to_json(base_path: str | Path) -> Path:
         if index % 100 == 0 or index == len(fits_paths):
             print(
                 f"[{index}/{len(fits_paths)}] "
-                f"Saved: {saved} | Skipped: {skipped} | "
+                f"Saved: {saved} | "
+                f"Skipped: {len(skipped_files)} | "
+                f"Duplicate outputs: {len(duplicate_outputs)} | "
                 f"Missing raw: {len(missing_raw)} | "
                 f"Failed: {len(failures)}",
                 flush=True,
@@ -345,7 +372,10 @@ def all_events_to_json(base_path: str | Path) -> Path:
             "input_dir": str(input_dir),
             "total": len(fits_paths),
             "saved": saved,
-            "skipped_existing": skipped,
+            "skipped_existing": len(skipped_files),
+            "skipped_files": skipped_files,
+            "duplicate_output_count": len(duplicate_outputs),
+            "duplicate_outputs": duplicate_outputs,
             "missing_raw_count": len(missing_raw),
             "missing_raw": missing_raw,
             "failed": len(failures),
