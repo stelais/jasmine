@@ -303,9 +303,11 @@ def all_events_to_json(base_path: str | Path) -> Path:
                 zeropoint=27.615,
             )
 
-            destination = (
-                output_dir / category / f"{event.objname}.json"
-            )
+            output_name = fits_path.stem.removeprefix(
+                "RGES_filters_"
+            ).removesuffix("_lightcurves_final")
+
+            destination = output_dir / category / f"{output_name}.json"
 
             # Detect different inputs targeting the same output this run.
             if destination in seen_destinations:
