@@ -84,11 +84,63 @@ class VariableStarEvent:
         if vartype not in RAW_FOLDERS:
             raise ValueError(f"Unknown Roman VARTYPE: {vartype!r}")
 
+        # Flare names encode the raw source ID in the middle:
+        # 0_388857263_504 -> raw/flare/388857263_multiband_lc.fits
+        if vartype == "fl":
+            match = re.fullmatch(
+                r"(?P<simulation>\d+)_"
+                r"(?P<source>\d+|flat)_"
+                r"(?P<segment>\d+)",
+                self.objname,
+            )
+
+            if match is None:
+                raise FileNotFoundError(
+                    f"Could not parse flare name {self.objname!r}"
+                )
+
+            source_id = match.group("source")
+
+            if source_id == "flat":
+                raise FileNotFoundError(
+                    f"{self.objname!r} is a synthetic flat event "
+                    "with no raw flare source"
+                )
+
+            path = (
+                    self.raw_dir
+                    / "flare"
+                    / f"{source_id}_multiband_lc.fits"
+            )
+
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"No raw flare source for "
+                    f"{self.objname!r}: {path}"
+                )
+
+            raw_name, ra, dec = read_raw_coordinates(path)
+
+            if raw_name != source_id:
+                raise ValueError(
+                    f"NAME mismatch in {path}: "
+                    f"expected {source_id!r}, "
+                    f"found {raw_name!r}"
+                )
+
+            return path, ra, dec
+
+        # Standard lookup for all non-flare categories.
         folder = self.raw_dir / RAW_FOLDERS[vartype]
         names = [self.objname]
 
-        # Try exact names before removing a simulation suffix.
-        source_name = re.sub(r"_ind\d+(?:_\d+)*$", "", self.objname)
+        # Match simulation names such as OGLE-BLG-DN-0001_ind0_3.
+        source_name = re.sub(
+            r"_ind\d+(?:_\d+)*$",
+            "",
+            self.objname,
+        )
+
         if source_name != self.objname:
             names.append(source_name)
 
@@ -103,7 +155,8 @@ class VariableStarEvent:
             if raw_name != candidate:
                 raise ValueError(
                     f"NAME mismatch in {path}: "
-                    f"expected {candidate!r}, found {raw_name!r}"
+                    f"expected {candidate!r}, "
+                    f"found {raw_name!r}"
                 )
 
             return path, ra, dec
