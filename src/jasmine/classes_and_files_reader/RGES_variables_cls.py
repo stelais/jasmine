@@ -286,7 +286,7 @@ class VariableStarEvent:
         curves = self.read_lightcurves()
 
         return {
-            "id": int(self.object_id),
+            "id": int(self.object_id), # requires inter number
             "objname": self.objname,
             "ra": float(ra),
             "dec": float(dec),
