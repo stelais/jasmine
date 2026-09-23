@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -24,6 +25,11 @@ RAW_FOLDERS = {
     "t2cep": "T2CEP",
 }
 
+def stable_object_id(event_key: str) -> int:
+    """Create a deterministic positive integer ID from an event name."""
+    digest = hashlib.sha256(event_key.encode("utf-8")).digest()
+    value = int.from_bytes(digest[:8], byteorder="big", signed=False)
+    return (value & 0x7FFF_FFFF_FFFF_FFFF) or 1
 
 @lru_cache(maxsize=None)
 def read_raw_coordinates(path: Path) -> tuple[str, float, float]:
@@ -65,6 +71,21 @@ class VariableStarEvent:
             raise ValueError("zeropoint must be finite")
 
         self.header = dict(fits.getheader(self.fits_path, ext=0))
+
+        if self.object_id is None:
+            category = self.fits_path.parent.name.removeprefix(
+                "RGES_filters_"
+            ).removesuffix("_lightcurves_final")
+
+            output_name = self.fits_path.stem.removeprefix(
+                "RGES_filters_"
+            ).removesuffix("_lightcurves_final")
+
+            self.object_id = stable_object_id(
+                f"{category}/{output_name}"
+            )
+        else:
+            self.object_id = int(self.object_id)
 
     @property
     def objname(self) -> str:
