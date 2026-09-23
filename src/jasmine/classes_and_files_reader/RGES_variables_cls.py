@@ -265,25 +265,31 @@ class VariableStarEvent:
 
     def to_json_dict(self) -> dict:
         coordinate_error = None
+        coordinate_is_placeholder = False
 
         try:
             raw_path, ra, dec = self.find_coordinates()
             raw_source = str(raw_path)
             raw_match_status = "found"
+            coordinate_status = "raw_source"
+
         except FileNotFoundError as error:
-            ra = None
-            dec = None
+            # ObjectModel requires numeric coordinates.
+            ra = 0.0
+            dec = 0.0
             raw_source = None
             raw_match_status = "not_found"
+            coordinate_status = "placeholder_missing_raw"
+            coordinate_is_placeholder = True
             coordinate_error = str(error)
 
         curves = self.read_lightcurves()
 
         return {
-            "id": self.object_id,
+            "id": int(self.object_id),
             "objname": self.objname,
-            "ra": ra,
-            "dec": dec,
+            "ra": float(ra),
+            "dec": float(dec),
             "photometric_variability": None,
             "metadata": {
                 "name": self.objname,
@@ -291,6 +297,13 @@ class VariableStarEvent:
                 "source_fits": self.fits_path.name,
                 "raw_match_status": raw_match_status,
                 "coordinate_source_fits": raw_source,
+                "coordinate_status": coordinate_status,
+                "coordinate_is_placeholder": coordinate_is_placeholder,
+                "coordinate_placeholder_value": (
+                    {"ra": 0.0, "dec": 0.0}
+                    if coordinate_is_placeholder
+                    else None
+                ),
                 "coordinate_error": coordinate_error,
                 "coordinate_units": "deg",
                 "input_photometry": "magnitude",
